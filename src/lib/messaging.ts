@@ -134,7 +134,8 @@ export type BackgroundMessage =
   | { type: "GET_STATE" }
   | { type: "GET_KNOWLEDGE_NODES" }
   | { type: "UPDATE_PROMPT"; id: string; pinned?: boolean; deleted?: boolean }
-  | { type: "EXPORT_PINNED" };
+  | { type: "EXPORT_PINNED" }
+  | { type: "EXPORT_KNOWLEDGE_NODES" };
 
 export type BackgroundResponse =
   | { ok: true; promptId?: string; skipped?: boolean; duplicateOf?: string }
