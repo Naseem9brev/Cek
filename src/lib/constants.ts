@@ -70,9 +70,11 @@ export const STORAGE_KEYS = {
   messageCounts: "messageCounts",
   contextUsage: "contextUsage",
   debugLog: "debugLog",
+  knowledgeNodes: "knowledgeNodes",
 } as const;
 
 export const MAX_PROMPTS = 500;
+export const MAX_KNOWLEDGE_NODES = 200;
 export const DUPLICATE_LOOKBACK = 30;
 export const DEFAULT_DUPLICATE_THRESHOLD = 0.92;
 export const EXACT_DEDUPE_MS = 2000;
