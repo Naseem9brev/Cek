@@ -48,6 +48,14 @@ export interface GroqSettings {
   duplicateAction: "flag" | "skip";
 }
 
+export interface Turn {
+  turnIndex: number;
+  prompt: string;
+  response: string;
+  timestamp: number;
+  partial?: boolean;
+}
+
 export interface KnowledgeNode {
   id: string;
   sessionId: string;
@@ -59,6 +67,15 @@ export interface KnowledgeNode {
   date: number;
   turnCount: number;
   searchTokens: string[];
+}
+
+export interface TurnCapturedPayload {
+  platform: Platform;
+  sessionId: string;
+  turnIndex: number;
+  prompt: string;
+  response: string;
+  partial?: boolean;
 }
 
 export interface PlatformSettings {
@@ -94,6 +111,7 @@ export interface ContextUpdatedPayload {
 
 export type BackgroundMessage =
   | { type: "PROMPT_CAPTURED"; payload: PromptCapturedPayload }
+  | { type: "TURN_CAPTURED"; payload: TurnCapturedPayload }
   | { type: "CONTEXT_UPDATED"; payload: ContextUpdatedPayload }
   | { type: "SEMANTIC_SEARCH"; query: string }
   | { type: "GET_STATE" }
