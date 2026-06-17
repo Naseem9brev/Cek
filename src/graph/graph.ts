@@ -70,7 +70,7 @@ function visData(nodes: KnowledgeNode[]) {
     color: {
       background: PLATFORM_COLORS[n.platform],
       border: "#1A3A1A",
-      highlight: { background: PLATFORM_COLORS[n.platform], border: "#2d6a2d" },
+      highlight: { background: PLATFORM_COLORS[n.platform], border: "#b85c38" },
     },
     size: nodeSize(n),
     font: { color: "#1A3A1A", size: 12, face: "Inter" },
@@ -80,7 +80,7 @@ function visData(nodes: KnowledgeNode[]) {
     from: e.from,
     to: e.to,
     width: e.width,
-    color: { color: "#E0D8C0", highlight: "#2d6a2d" },
+    color: { color: "#E0D8C0", highlight: "#b85c38" },
   }));
   return { nodes: visNodes, edges };
 }
