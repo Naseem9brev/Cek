@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cek — Knowledge graph</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@700&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/vis-network/styles/vis-network.min.css"
+    />
+    <link rel="stylesheet" href="./graph.css" />
+  </head>
+  <body>
+    <header class="graph-header">
+      <div class="header-left">
+        <h1 class="wordmark">cek</h1>
+        <span class="subtitle">knowledge graph</span>
+      </div>
+      <button id="settings-btn" class="link-btn" type="button">Settings</button>
+    </header>
+
+    <div class="filters">
+      <div id="platform-filters" class="filter-pills"></div>
+      <select id="date-filter" class="date-select">
+        <option value="all">All time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+    </div>
+
+    <div class="graph-layout">
+      <div id="graph-network" class="graph-canvas"></div>
+      <aside id="detail-panel" class="detail-panel hidden">
+        <button id="close-detail" class="close-btn" type="button" aria-label="Close">✕</button>
+        <h2 id="detail-topic"></h2>
+        <p id="detail-meta" class="detail-meta"></p>
+        <div id="detail-entities" class="detail-section"></div>
+        <div id="detail-decisions" class="detail-section"></div>
+        <div id="detail-questions" class="detail-section"></div>
+      </aside>
+    </div>
+
+    <p id="empty-graph" class="empty-graph hidden">No knowledge nodes yet. Chat with summarisation enabled to build your graph.</p>
+
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script type="module" src="./graph.ts"></script>
+  </body>
+</html>
