@@ -24,9 +24,11 @@ interface VisDataSet {
 }
 
 interface GraphNetwork {
-  on: (event: string, cb: (params: ClickParams) => void) => void;
+  on: (event: string, cb: (params: ClickParams & { node?: string }) => void) => void;
   setData: (data: { nodes: VisDataSet; edges: VisDataSet }) => void;
   fit: (options?: { animation?: boolean }) => void;
+  getConnectedNodes: (nodeId: string) => string[];
+  getConnectedEdges: (nodeId: string) => string[];
   focus: (nodeId: string, options?: { scale?: number; animation?: boolean }) => void;
 }
 
@@ -43,8 +45,8 @@ interface GraphNode {
   font?: { color: string; size: number; face: string; strokeWidth?: number; strokeColor?: string };
   opacity?: number;
   group?: string;
-  _kind?: "session";
-  _raw?: KnowledgeNode;
+  _kind?: "session" | "entity";
+  _raw?: KnowledgeNode | EntityMeta;
 }
 
 interface GraphEdge {
@@ -63,6 +65,13 @@ interface NodeColor {
   hover?: { background: string; border: string };
 }
 
+interface EntityMeta {
+  key: string;
+  label: string;
+  sessionIds: string[];
+  linkCount: number;
+}
+
 type GraphView = "sessions" | "entities";
 
 const PLATFORM_COLORS: Record<Platform, string> = {
@@ -70,6 +79,15 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   chatgpt: "#10a37f",
   gemini: "#4285f4",
 };
+
+const CLUSTER_PALETTE = [
+  "#e8b84a",
+  "#e85a9a",
+  "#5a9ae8",
+  "#5ae8a0",
+  "#c85ae8",
+  "#e85a5a",
+];
 
 const NORMAL_OPACITY = 1;
 
@@ -146,6 +164,128 @@ function buildSessionGraph(nodes: KnowledgeNode[]): {
   return { graphNodes, graphEdges };
 }
 
+function buildEntityGraph(nodes: KnowledgeNode[]): {
+  graphNodes: GraphNode[];
+  graphEdges: GraphEdge[];
+  entityMeta: Map<string, EntityMeta>;
+} {
+  const entityMeta = new Map<string, EntityMeta>();
+  const edgeCounts = new Map<string, number>();
+
+  for (const session of nodes) {
+    const ents = session.entities
+      .map((e) => e.trim())
+      .filter(Boolean)
+      .map((e) => ({ key: e.toLowerCase(), label: e }));
+
+    for (const { key, label } of ents) {
+      const existing = entityMeta.get(key);
+      if (existing) {
+        existing.sessionIds.push(session.id);
+        existing.linkCount = existing.sessionIds.length;
+      } else {
+        entityMeta.set(key, {
+          key,
+          label,
+          sessionIds: [session.id],
+          linkCount: 1,
+        });
+      }
+    }
+
+    for (let i = 0; i < ents.length; i++) {
+      for (let j = i + 1; j < ents.length; j++) {
+        const pair = [ents[i]!.key, ents[j]!.key].sort().join("|");
+        edgeCounts.set(pair, (edgeCounts.get(pair) ?? 0) + 1);
+      }
+    }
+  }
+
+  const components = computeComponents(entityMeta, edgeCounts);
+  const graphNodes: GraphNode[] = [];
+
+  for (const [key, meta] of entityMeta) {
+    const cluster = components.get(key) ?? 0;
+    const color = CLUSTER_PALETTE[cluster % CLUSTER_PALETTE.length]!;
+    const degree = countDegree(key, edgeCounts);
+    graphNodes.push({
+      id: `entity:${key}`,
+      label: truncate(meta.label, 22),
+      title: `${meta.label}\n${meta.linkCount} session(s)`,
+      size: Math.min(36, Math.sqrt(degree + meta.linkCount) * 4 + 8),
+      color: {
+        background: color,
+        border: "#444",
+        highlight: { background: color, border: "#fff" },
+        hover: { background: color, border: "#fff" },
+      },
+      font: { color: "#dcddde", size: 10, face: "Inter", strokeWidth: 0 },
+      opacity: NORMAL_OPACITY,
+      group: `cluster-${cluster}`,
+      _kind: "entity",
+      _raw: meta,
+    });
+  }
+
+  const graphEdges: GraphEdge[] = [];
+  let edgeIdx = 0;
+  for (const [pair, weight] of edgeCounts) {
+    const [a, b] = pair.split("|");
+    if (!a || !b) continue;
+    graphEdges.push({
+      id: `ee${edgeIdx++}`,
+      from: `entity:${a}`,
+      to: `entity:${b}`,
+      width: Math.min(weight * 0.5 + 0.3, 3),
+      color: { color: "#444444", opacity: 0.5, highlight: "#888888" },
+      opacity: NORMAL_OPACITY,
+    });
+  }
+
+  return { graphNodes, graphEdges, entityMeta };
+}
+
+function countDegree(entityKey: string, edgeCounts: Map<string, number>): number {
+  let degree = 0;
+  for (const pair of edgeCounts.keys()) {
+    if (pair.includes(entityKey)) degree++;
+  }
+  return degree;
+}
+
+function computeComponents(
+  entityMeta: Map<string, EntityMeta>,
+  edgeCounts: Map<string, number>
+): Map<string, number> {
+  const parent = new Map<string, string>();
+  for (const key of entityMeta.keys()) parent.set(key, key);
+
+  function find(x: string): string {
+    const p = parent.get(x)!;
+    if (p !== x) parent.set(x, find(p));
+    return parent.get(x)!;
+  }
+
+  function union(a: string, b: string): void {
+    parent.set(find(a), find(b));
+  }
+
+  for (const pair of edgeCounts.keys()) {
+    const [a, b] = pair.split("|");
+    if (a && b) union(a, b);
+  }
+
+  const roots = new Map<string, number>();
+  let clusterId = 0;
+  const result = new Map<string, number>();
+  for (const key of entityMeta.keys()) {
+    const root = find(key);
+    if (!roots.has(root)) roots.set(root, clusterId++);
+    result.set(key, roots.get(root)!);
+  }
+  return result;
+}
+
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
@@ -199,11 +339,22 @@ function renderGraph(): void {
   $("graph-network").style.visibility = isEmpty ? "hidden" : "visible";
 
   if (isEmpty) {
-    updateInsightPanel([], []);
+    updateInsightPanel([], [], new Map());
     return;
   }
 
-  const { graphNodes, graphEdges } = buildSessionGraph(knowledge);
+  let graphNodes: GraphNode[];
+  let graphEdges: GraphEdge[];
+  let entityMeta = new Map<string, EntityMeta>();
+
+  if (graphView === "sessions") {
+    ({ graphNodes, graphEdges } = buildSessionGraph(knowledge));
+  } else {
+    const built = buildEntityGraph(knowledge);
+    graphNodes = built.graphNodes;
+    graphEdges = built.graphEdges;
+    entityMeta = built.entityMeta;
+  }
 
   if (!nodeDataset || !edgeDataset) {
     nodeDataset = new vis.DataSet(graphNodes);
@@ -221,7 +372,7 @@ function renderGraph(): void {
     edgeDataset.add(graphEdges);
   }
 
-  updateInsightPanel(knowledge, graphNodes);
+  updateInsightPanel(knowledge, graphNodes, entityMeta);
   updateFooter(graphNodes.length, graphEdges.length);
 
   setTimeout(() => network?.fit({ animation: true }), 300);
@@ -251,14 +402,27 @@ function showSelection(nodeId: string): void {
   const detail = $("selection-detail");
   section.classList.remove("hidden");
 
-  if (node._kind === "session" && node._raw) {
-    const raw = node._raw;
+  if (node._kind === "session" && node._raw && "topic" in node._raw) {
+    const raw = node._raw as KnowledgeNode;
     detail.innerHTML = `
       <h3>${escapeHtml(raw.topic)}</h3>
       <p class="meta">${PLATFORM_LABELS[raw.platform]} · ${formatDate(raw.date)} · ${raw.turnCount} turns</p>
       ${listBlock("Entities", raw.entities)}
       ${listBlock("Decisions", raw.decisions)}
       ${listBlock("Open questions", raw.openQuestions)}
+    `;
+  } else if (node._kind === "entity" && node._raw && "label" in node._raw) {
+    const raw = node._raw as EntityMeta;
+    const sessions = raw.sessionIds
+      .map((id) => allNodes.find((n) => n.id === id))
+      .filter(Boolean) as KnowledgeNode[];
+    detail.innerHTML = `
+      <h3>${escapeHtml(raw.label)}</h3>
+      <p class="meta">${raw.linkCount} session(s) · ${sessions.length} linked</p>
+      ${listBlock(
+        "Sessions",
+        sessions.map((s) => truncate(s.topic, 40))
+      )}
     `;
   }
 }
@@ -276,10 +440,15 @@ function formatDate(ts: number): string {
   });
 }
 
-function updateInsightPanel(knowledge: KnowledgeNode[], graphNodes: GraphNode[]): void {
+function updateInsightPanel(
+  knowledge: KnowledgeNode[],
+  graphNodes: GraphNode[],
+  entityMeta: Map<string, EntityMeta>
+): void {
   const edgeCount = edgeDataset?.length ?? 0;
   const sessionCount = knowledge.length;
-  const entityCount = countUniqueEntities(knowledge);
+  const entityCount =
+    graphView === "entities" ? graphNodes.length : countUniqueEntities(knowledge);
 
   $("stats-grid").innerHTML = `
     <div class="stat-card"><div class="stat-value">${sessionCount}</div><div class="stat-label">Sessions</div></div>
@@ -295,11 +464,20 @@ function updateInsightPanel(knowledge: KnowledgeNode[], graphNodes: GraphNode[])
     return;
   }
 
-  const clustered = edgeCount > sessionCount * 0.3;
-  $("insight-text").textContent = clustered
-    ? `Your sessions form a connected network — topics overlap across ${sessionCount} conversations.`
-    : `You have ${sessionCount} session${sessionCount === 1 ? "" : "s"} with limited overlap. Switch to Concepts for a denser entity map.`;
-  renderTopSessions(knowledge);
+  if (graphView === "sessions") {
+    const clustered = edgeCount > sessionCount * 0.3;
+    $("insight-text").textContent = clustered
+      ? `Your sessions form a connected network — topics overlap across ${sessionCount} conversations. Hover a node to highlight its neighbours.`
+      : `You have ${sessionCount} session${sessionCount === 1 ? "" : "s"} with limited overlap. Switch to Concepts for a denser entity map.`;
+    renderTopSessions(knowledge);
+  } else {
+    const clusters = new Set(
+      [...entityMeta.values()].map((_, i) => i)
+    ).size;
+    $("insight-text").textContent = `${entityMeta.size} concepts across ${sessionCount} sessions, grouped into coloured clusters by co-occurrence. Larger nodes appear in more sessions.`;
+    renderTopEntities(entityMeta);
+    void clusters;
+  }
 }
 
 function countUniqueEntities(nodes: KnowledgeNode[]): number {
@@ -321,6 +499,19 @@ function renderTopSessions(knowledge: KnowledgeNode[]): void {
     .map(
       (n) =>
         `<li data-id="${n.id}"><span>${escapeHtml(truncate(n.topic, 32))}</span><span class="count">${n.entities.length} ent</span></li>`
+    )
+    .join("");
+  bindTopListClicks();
+}
+
+function renderTopEntities(entityMeta: Map<string, EntityMeta>): void {
+  const sorted = [...entityMeta.values()]
+    .sort((a, b) => b.linkCount - a.linkCount)
+    .slice(0, 6);
+  $("top-list").innerHTML = sorted
+    .map(
+      (e) =>
+        `<li data-id="entity:${e.key}"><span>${escapeHtml(e.label)}</span><span class="count">${e.linkCount}</span></li>`
     )
     .join("");
   bindTopListClicks();
@@ -394,6 +585,10 @@ $("date-filter").addEventListener("change", (e) => {
   const val = (e.target as HTMLSelectElement).value;
   filterDays = val === "all" ? "all" : Number(val);
   renderGraph();
+});
+
+$("graph-search").addEventListener("input", (e) => {
+  searchQuery = (e.target as HTMLInputElement).value;
 });
 
 $("fit-btn").addEventListener("click", () => {
