@@ -318,6 +318,16 @@ async function handleExportKnowledgeNodes(): Promise<BackgroundResponse> {
   return { ok: true, data: JSON.stringify(nodes, null, 2) };
 }
 
+async function resolveTargetTabId(
+  senderTabId: number,
+  messageTabId?: number
+): Promise<number> {
+  if (senderTabId >= 0) return senderTabId;
+  if (messageTabId !== undefined && messageTabId >= 0) return messageTabId;
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tabs[0]?.id ?? -1;
+}
+
 chrome.runtime.onMessage.addListener(
   (
     message: BackgroundMessage,
@@ -358,11 +368,18 @@ chrome.runtime.onMessage.addListener(
             );
             break;
           case "DISMISS_CONTEXT_MATCH":
-            sendResponse(await handleDismissContextMatch(tabId));
+            sendResponse(
+              await handleDismissContextMatch(
+                await resolveTargetTabId(tabId, message.tabId)
+              )
+            );
             break;
           case "INJECT_CONTEXT":
             sendResponse(
-              await handleInjectContext(tabId, message.nodeId)
+              await handleInjectContext(
+                await resolveTargetTabId(tabId, message.tabId),
+                message.nodeId
+              )
             );
             break;
           case "UPDATE_PROMPT":
