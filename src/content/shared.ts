@@ -91,6 +91,7 @@ async function capturePrompt(
   lastSubmit = { text: trimmed, at: Date.now() };
 
   const sessionId = extractSessionId(location.href, platform);
+  const turnIndex = queryAll(selectors.messageBlocks).length;
 
   void checkContextMatch(trimmed, platform, selectors.messageBlocks);
 
@@ -101,11 +102,11 @@ async function capturePrompt(
       text: trimmed,
       sessionId,
       tabUrl: location.href,
+      turnIndex,
     },
   });
 
-  const userCount = queryAll(selectors.messageBlocks).length;
-  watchResponse(platform, selectors, trimmed, userCount);
+  watchResponse(platform, selectors, trimmed, turnIndex);
 
   void updateContext(platform, modelLabel, selectors.messageBlocks);
 }

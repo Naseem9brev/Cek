@@ -46,6 +46,7 @@ import {
 import {
   handleTurnCaptured,
   initSummarisationListeners,
+  recordPendingPrompt,
   resetIdleAlarm,
 } from "./summarisation";
 
@@ -181,6 +182,14 @@ async function handlePromptCaptured(
 
   await saveMessageCounts(messageCounts);
   void resetIdleAlarm(tabId);
+  void recordPendingPrompt(
+    tabId,
+    payload.sessionId,
+    payload.platform,
+    payload.tabUrl,
+    text,
+    payload.turnIndex
+  );
   return { ok: true, promptId: prompt.id, duplicateOf, skipped };
 }
 

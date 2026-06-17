@@ -7,6 +7,11 @@ export interface SessionBufferEntry {
   platform: Platform;
   tabUrl: string;
   turns: Turn[];
+  pendingPrompts: Array<{
+    turnIndex: number;
+    prompt: string;
+    timestamp: number;
+  }>;
   lastActivity: number;
 }
 
@@ -59,6 +64,7 @@ export async function appendTurn(
     platform,
     tabUrl,
     turns: [],
+    pendingPrompts: [],
     lastActivity: Date.now(),
   };
 
@@ -77,6 +83,61 @@ export async function appendTurn(
   buffers[key] = entry;
   await saveAllBuffers(buffers);
   return entry;
+}
+
+export async function recordPendingPrompt(
+  tabId: number,
+  sessionId: string,
+  platform: Platform,
+  tabUrl: string,
+  prompt: string,
+  turnIndex: number
+): Promise<void> {
+  const buffers = await getAllBuffers();
+  const key = bufferKey(tabId, sessionId);
+  const entry: SessionBufferEntry = buffers[key] ?? {
+    tabId,
+    sessionId,
+    platform,
+    tabUrl,
+    turns: [],
+    pendingPrompts: [],
+    lastActivity: Date.now(),
+  };
+
+  entry.platform = platform;
+  entry.tabUrl = tabUrl;
+  entry.lastActivity = Date.now();
+
+  const existingIdx = entry.pendingPrompts.findIndex(
+    (p) => p.turnIndex === turnIndex
+  );
+  const pending = { turnIndex, prompt, timestamp: Date.now() };
+  if (existingIdx >= 0) {
+    entry.pendingPrompts[existingIdx] = pending;
+  } else {
+    entry.pendingPrompts.push(pending);
+  }
+
+  buffers[key] = entry;
+  await saveAllBuffers(buffers);
+}
+
+export function mergeTurnsForSummarisation(
+  entry: SessionBufferEntry
+): Turn[] {
+  const turns = [...entry.turns];
+  for (const pending of entry.pendingPrompts) {
+    if (turns.some((t) => t.turnIndex === pending.turnIndex)) continue;
+    turns.push({
+      turnIndex: pending.turnIndex,
+      prompt: pending.prompt,
+      response: "(response not captured)",
+      timestamp: pending.timestamp,
+      partial: true,
+    });
+  }
+  return turns.sort((a, b) => a.turnIndex - b.turnIndex);
 }
 
 export async function clearSessionBuffer(
