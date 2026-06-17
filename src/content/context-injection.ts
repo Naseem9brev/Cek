@@ -12,14 +12,19 @@ import {
 
 const TOAST_ID = "cek-context-toast";
 
-function isFreshChat(messageSelectors: string[]): boolean {
-  const url = location.href.toLowerCase();
-  if (url.includes("/new") || url.endsWith("/chat") || url.endsWith("/")) {
-    const blocks = queryAll(messageSelectors);
-    return blocks.length <= 1;
-  }
-  const blocks = queryAll(messageSelectors);
-  return blocks.length <= 1;
+function contextMatchKey(): string {
+  return `contextMatchChecked:${location.pathname}`;
+}
+
+async function hasCheckedContextMatch(): Promise<boolean> {
+  const key = contextMatchKey();
+  const result = await chrome.storage.session.get(key);
+  return !!(result[key] as boolean | undefined);
+}
+
+async function markContextMatchChecked(): Promise<void> {
+  const key = contextMatchKey();
+  await chrome.storage.session.set({ [key]: true });
 }
 
 export async function checkContextMatch(
@@ -28,12 +33,15 @@ export async function checkContextMatch(
   messageSelectors: string[]
 ): Promise<void> {
   if (!isFreshChat(messageSelectors)) return;
+  if (await hasCheckedContextMatch()) return;
 
   const res = await sendBackgroundMessage({ type: "GET_KNOWLEDGE_NODES" });
   if (!res.ok || !("nodes" in res) || !res.nodes?.length) return;
 
   const match = scorePromptAgainstNodes(prompt, res.nodes);
   if (!match || match.score < CONTEXT_MATCH_THRESHOLD) return;
+
+  await markContextMatchChecked();
 
   await sendBackgroundMessage({
     type: "CONTEXT_MATCH_FOUND",
@@ -43,6 +51,16 @@ export async function checkContextMatch(
       score: match.score,
     },
   });
+}
+
+function isFreshChat(messageSelectors: string[]): boolean {
+  const url = location.href.toLowerCase();
+  if (url.includes("/new") || url.endsWith("/chat") || url.endsWith("/")) {
+    const blocks = queryAll(messageSelectors);
+    return blocks.length <= 1;
+  }
+  const blocks = queryAll(messageSelectors);
+  return blocks.length <= 1;
 }
 
 export function showContextToast(node: KnowledgeNode, onInject: () => void): void {
