@@ -6,14 +6,64 @@ import { sendBackgroundMessage } from "../lib/messaging";
 declare const vis: {
   Network: new (
     container: HTMLElement,
-    data: { nodes: unknown[]; edges: unknown[] },
+    data: { nodes: VisDataSet; edges: VisDataSet },
     options: Record<string, unknown>
-  ) => {
-    on: (event: string, cb: (params: { nodes: string[] }) => void) => void;
-    setData: (data: { nodes: unknown[]; edges: unknown[] }) => void;
-  };
-  DataSet: new (items: unknown[]) => unknown;
+  ) => GraphNetwork;
+  DataSet: new (
+    items?: GraphNode[] | GraphEdge[],
+    options?: Record<string, unknown>
+  ) => VisDataSet;
 };
+
+interface VisDataSet {
+  add: (items: GraphNode[] | GraphEdge[]) => void;
+  clear: () => void;
+  get: (options?: { fields?: string[] }) => GraphNode[] | GraphEdge[];
+  update: (items: Partial<GraphNode>[] | Partial<GraphEdge>[]) => void;
+  length: number;
+}
+
+interface GraphNetwork {
+  on: (event: string, cb: (params: ClickParams) => void) => void;
+  setData: (data: { nodes: VisDataSet; edges: VisDataSet }) => void;
+  fit: (options?: { animation?: boolean }) => void;
+  focus: (nodeId: string, options?: { scale?: number; animation?: boolean }) => void;
+}
+
+interface ClickParams {
+  nodes: string[];
+}
+
+interface GraphNode {
+  id: string;
+  label: string;
+  title?: string;
+  size?: number;
+  color?: NodeColor;
+  font?: { color: string; size: number; face: string; strokeWidth?: number; strokeColor?: string };
+  opacity?: number;
+  group?: string;
+  _kind?: "session";
+  _raw?: KnowledgeNode;
+}
+
+interface GraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  width?: number;
+  color?: { color: string; opacity?: number; highlight?: string };
+  opacity?: number;
+}
+
+interface NodeColor {
+  background: string;
+  border: string;
+  highlight?: { background: string; border: string };
+  hover?: { background: string; border: string };
+}
+
+type GraphView = "sessions" | "entities";
 
 const PLATFORM_COLORS: Record<Platform, string> = {
   claude: "#d97757",
@@ -21,36 +71,21 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   gemini: "#4285f4",
 };
 
+const NORMAL_OPACITY = 1;
+
 let allNodes: KnowledgeNode[] = [];
 let filterPlatform: Platform | "all" = "all";
 let filterDays: number | "all" = "all";
-let network: InstanceType<typeof vis.Network> | null = null;
-let selectedNodeId: string | null = null;
+let graphView: GraphView = "sessions";
+let network: GraphNetwork | null = null;
+let nodeDataset: VisDataSet | null = null;
+let edgeDataset: VisDataSet | null = null;
+let selectedId: string | null = null;
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 
-function nodeSize(node: KnowledgeNode): number {
-  return Math.sqrt(node.entities.length + node.turnCount) * 8 + 12;
-}
-
-function buildEdges(nodes: KnowledgeNode[]): Array<{ from: string; to: string; width: number }> {
-  const edges: Array<{ from: string; to: string; width: number }> = [];
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i]!;
-      const b = nodes[j]!;
-      const setA = new Set(a.entities.map((e) => e.toLowerCase()));
-      const shared = b.entities.filter((e) => setA.has(e.toLowerCase())).length;
-      if (shared >= 1) {
-        edges.push({ from: a.id, to: b.id, width: Math.min(shared, 4) });
-      }
-    }
-  }
-  return edges;
-}
-
-function filteredNodes(): KnowledgeNode[] {
+function filteredKnowledgeNodes(): KnowledgeNode[] {
   let list = [...allNodes];
   if (filterPlatform !== "all") {
     list = list.filter((n) => n.platform === filterPlatform);
@@ -62,91 +97,258 @@ function filteredNodes(): KnowledgeNode[] {
   return list;
 }
 
-function visData(nodes: KnowledgeNode[]) {
-  const visNodes = nodes.map((n) => ({
+function sessionNodeSize(node: KnowledgeNode): number {
+  return Math.min(40, Math.sqrt(node.entities.length + node.turnCount) * 5 + 10);
+}
+
+function buildSessionGraph(nodes: KnowledgeNode[]): {
+  graphNodes: GraphNode[];
+  graphEdges: GraphEdge[];
+} {
+  const graphNodes: GraphNode[] = nodes.map((n) => ({
     id: n.id,
-    label: n.topic.length > 30 ? n.topic.slice(0, 28) + "…" : n.topic,
+    label: truncate(n.topic, 28),
     title: `${n.topic}\n${n.entities.join(", ")}`,
+    size: sessionNodeSize(n),
     color: {
       background: PLATFORM_COLORS[n.platform],
-      border: "#1A3A1A",
-      highlight: { background: PLATFORM_COLORS[n.platform], border: "#b85c38" },
+      border: "#555",
+      highlight: { background: PLATFORM_COLORS[n.platform], border: "#fff" },
+      hover: { background: PLATFORM_COLORS[n.platform], border: "#fff" },
     },
-    size: nodeSize(n),
-    font: { color: "#1A3A1A", size: 12, face: "Inter" },
+    font: { color: "#dcddde", size: 11, face: "Inter", strokeWidth: 0 },
+    opacity: NORMAL_OPACITY,
+    group: n.platform,
+    _kind: "session",
+    _raw: n,
   }));
-  const edges = buildEdges(nodes).map((e, i) => ({
-    id: `e${i}`,
-    from: e.from,
-    to: e.to,
-    width: e.width,
-    color: { color: "#E0D8C0", highlight: "#b85c38" },
-  }));
-  return { nodes: visNodes, edges };
-}
 
-function renderGraph(): void {
-  const nodes = filteredNodes();
-  $("empty-graph").classList.toggle("hidden", nodes.length > 0);
-
-  const container = $("graph-network");
-  const data = visData(nodes);
-
-  const options = {
-    physics: {
-      stabilization: { iterations: 120 },
-      barnesHut: { gravitationalConstant: -4000, springLength: 120 },
-    },
-    interaction: { hover: true, tooltipDelay: 100 },
-    edges: { smooth: { type: "continuous" } },
-  };
-
-  if (!network) {
-    network = new vis.Network(container, data, options);
-    network.on("click", (params) => {
-      if (params.nodes.length) {
-        showDetail(params.nodes[0]!);
+  const graphEdges: GraphEdge[] = [];
+  let edgeIdx = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i]!;
+      const b = nodes[j]!;
+      const setA = new Set(a.entities.map((e) => e.toLowerCase()));
+      const shared = b.entities.filter((e) => setA.has(e.toLowerCase())).length;
+      if (shared >= 1) {
+        graphEdges.push({
+          id: `se${edgeIdx++}`,
+          from: a.id,
+          to: b.id,
+          width: Math.min(shared * 0.8 + 0.5, 4),
+          color: { color: "#555555", opacity: 0.6, highlight: "#aaaaaa" },
+          opacity: NORMAL_OPACITY,
+        });
       }
-    });
-  } else {
-    network.setData(data);
+    }
   }
+  return { graphNodes, graphEdges };
 }
 
-function showDetail(id: string): void {
-  selectedNodeId = id;
-  const node = allNodes.find((n) => n.id === id);
-  if (!node) return;
-
-  const panel = $("detail-panel");
-  panel.classList.remove("hidden");
-
-  $("detail-topic").textContent = node.topic;
-  $("detail-meta").textContent = `${PLATFORM_LABELS[node.platform]} · ${new Date(node.date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} · ${node.turnCount} turns`;
-
-  renderListSection("detail-entities", "Entities", node.entities);
-  renderListSection("detail-decisions", "Decisions", node.decisions);
-  renderListSection("detail-questions", "Open questions", node.openQuestions);
-}
-
-function renderListSection(elId: string, title: string, items: string[]): void {
-  const el = $(elId);
-  if (!items.length) {
-    el.innerHTML = "";
-    return;
-  }
-  el.innerHTML = `<h3>${title}</h3><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function networkOptions(): Record<string, unknown> {
+  return {
+    nodes: {
+      shape: "dot",
+      scaling: { min: 8, max: 44 },
+      borderWidth: 1,
+      shadow: false,
+    },
+    edges: {
+      smooth: { type: "continuous", roundness: 0.4 },
+      selectionWidth: 2,
+      hoverWidth: 1.5,
+    },
+    physics: {
+      enabled: true,
+      stabilization: { iterations: 180, fit: true },
+      barnesHut: {
+        gravitationalConstant: -8000,
+        centralGravity: 0.15,
+        springLength: 140,
+        springConstant: 0.04,
+        damping: 0.12,
+        avoidOverlap: 0.2,
+      },
+    },
+    interaction: {
+      hover: true,
+      tooltipDelay: 80,
+      hideEdgesOnDrag: false,
+      zoomView: true,
+      dragView: true,
+      navigationButtons: false,
+      keyboard: { enabled: true },
+    },
+  };
+}
+
+function renderGraph(): void {
+  const knowledge = filteredKnowledgeNodes();
+  const isEmpty = knowledge.length === 0;
+
+  $("empty-graph").classList.toggle("hidden", !isEmpty);
+  $("graph-network").style.visibility = isEmpty ? "hidden" : "visible";
+
+  if (isEmpty) {
+    updateInsightPanel([], []);
+    return;
+  }
+
+  const { graphNodes, graphEdges } = buildSessionGraph(knowledge);
+
+  if (!nodeDataset || !edgeDataset) {
+    nodeDataset = new vis.DataSet(graphNodes);
+    edgeDataset = new vis.DataSet(graphEdges);
+    network = new vis.Network(
+      $("graph-network"),
+      { nodes: nodeDataset, edges: edgeDataset },
+      networkOptions()
+    );
+    bindNetworkEvents();
+  } else {
+    nodeDataset.clear();
+    edgeDataset.clear();
+    nodeDataset.add(graphNodes);
+    edgeDataset.add(graphEdges);
+  }
+
+  updateInsightPanel(knowledge, graphNodes);
+  updateFooter(graphNodes.length, graphEdges.length);
+
+  setTimeout(() => network?.fit({ animation: true }), 300);
+}
+
+function bindNetworkEvents(): void {
+  if (!network) return;
+
+  network.on("click", (params) => {
+    if (params.nodes.length) {
+      selectedId = params.nodes[0]!;
+      showSelection(selectedId);
+    } else {
+      selectedId = null;
+      $("selection-section").classList.add("hidden");
+    }
+  });
+}
+
+function showSelection(nodeId: string): void {
+  if (!nodeDataset) return;
+  const nodes = nodeDataset.get() as GraphNode[];
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node) return;
+
+  const section = $("selection-section");
+  const detail = $("selection-detail");
+  section.classList.remove("hidden");
+
+  if (node._kind === "session" && node._raw) {
+    const raw = node._raw;
+    detail.innerHTML = `
+      <h3>${escapeHtml(raw.topic)}</h3>
+      <p class="meta">${PLATFORM_LABELS[raw.platform]} · ${formatDate(raw.date)} · ${raw.turnCount} turns</p>
+      ${listBlock("Entities", raw.entities)}
+      ${listBlock("Decisions", raw.decisions)}
+      ${listBlock("Open questions", raw.openQuestions)}
+    `;
+  }
+}
+
+function listBlock(title: string, items: string[]): string {
+  if (!items.length) return "";
+  return `<p class="meta" style="margin-top:8px">${title}</p><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+}
+
+function formatDate(ts: number): string {
+  return new Date(ts).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function updateInsightPanel(knowledge: KnowledgeNode[], graphNodes: GraphNode[]): void {
+  const edgeCount = edgeDataset?.length ?? 0;
+  const sessionCount = knowledge.length;
+  const entityCount = countUniqueEntities(knowledge);
+
+  $("stats-grid").innerHTML = `
+    <div class="stat-card"><div class="stat-value">${sessionCount}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card"><div class="stat-value">${entityCount}</div><div class="stat-label">Concepts</div></div>
+    <div class="stat-card"><div class="stat-value">${graphNodes.length}</div><div class="stat-label">Visible</div></div>
+    <div class="stat-card"><div class="stat-value">${edgeCount}</div><div class="stat-label">Links</div></div>
+  `;
+
+  if (sessionCount === 0) {
+    $("insight-text").textContent =
+      "Start chatting with summarisation enabled to grow your graph.";
+    $("top-list").innerHTML = "";
+    return;
+  }
+
+  const clustered = edgeCount > sessionCount * 0.3;
+  $("insight-text").textContent = clustered
+    ? `Your sessions form a connected network — topics overlap across ${sessionCount} conversations.`
+    : `You have ${sessionCount} session${sessionCount === 1 ? "" : "s"} with limited overlap. Switch to Concepts for a denser entity map.`;
+  renderTopSessions(knowledge);
+}
+
+function countUniqueEntities(nodes: KnowledgeNode[]): number {
+  const set = new Set<string>();
+  for (const n of nodes) {
+    for (const e of n.entities) {
+      const k = e.trim().toLowerCase();
+      if (k) set.add(k);
+    }
+  }
+  return set.size;
+}
+
+function renderTopSessions(knowledge: KnowledgeNode[]): void {
+  const sorted = [...knowledge]
+    .sort((a, b) => b.entities.length + b.turnCount - (a.entities.length + a.turnCount))
+    .slice(0, 6);
+  $("top-list").innerHTML = sorted
+    .map(
+      (n) =>
+        `<li data-id="${n.id}"><span>${escapeHtml(truncate(n.topic, 32))}</span><span class="count">${n.entities.length} ent</span></li>`
+    )
+    .join("");
+  bindTopListClicks();
+}
+
+function bindTopListClicks(): void {
+  $("top-list").querySelectorAll("li").forEach((li) => {
+    li.addEventListener("click", () => {
+      const id = li.getAttribute("data-id");
+      if (id && network) {
+        network.focus(id, { scale: 1.2, animation: true });
+        selectedId = id;
+        showSelection(id);
+      }
+    });
+  });
+}
+
+function updateFooter(nodeCount: number, edgeCount: number): void {
+  const view = graphView === "sessions" ? "Sessions" : "Concepts";
+  $("footer-status").textContent = `${view} · ${nodeCount} nodes · ${edgeCount} edges`;
+}
+
 function renderFilters(): void {
   const container = $("platform-filters");
   container.innerHTML = "";
+  const platforms: Array<Platform | "all"> = ["all", "claude", "chatgpt"];
 
-  const platforms: Array<Platform | "all"> = ["all", "claude", "chatgpt", "gemini"];
   for (const p of platforms) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -159,6 +361,17 @@ function renderFilters(): void {
     });
     container.appendChild(btn);
   }
+}
+
+function setGraphView(view: GraphView): void {
+  graphView = view;
+  $("view-sessions").classList.toggle("active", view === "sessions");
+  $("view-entities").classList.toggle("active", view === "entities");
+  $("view-sessions").setAttribute("aria-selected", String(view === "sessions"));
+  $("view-entities").setAttribute("aria-selected", String(view === "entities"));
+  selectedId = null;
+  $("selection-section").classList.add("hidden");
+  renderGraph();
 }
 
 async function loadNodes(): Promise<void> {
@@ -174,15 +387,17 @@ $("settings-btn").addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
+$("view-sessions").addEventListener("click", () => setGraphView("sessions"));
+$("view-entities").addEventListener("click", () => setGraphView("entities"));
+
 $("date-filter").addEventListener("change", (e) => {
   const val = (e.target as HTMLSelectElement).value;
   filterDays = val === "all" ? "all" : Number(val);
   renderGraph();
 });
 
-$("close-detail").addEventListener("click", () => {
-  $("detail-panel").classList.add("hidden");
-  selectedNodeId = null;
+$("fit-btn").addEventListener("click", () => {
+  network?.fit({ animation: true });
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
