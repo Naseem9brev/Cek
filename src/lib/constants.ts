@@ -78,6 +78,7 @@ export const MAX_KNOWLEDGE_NODES = 200;
 export const SESSION_IDLE_MS = 600_000;
 export const STREAM_SETTLE_MS = 1500;
 export const STREAM_HARD_TIMEOUT_MS = 120_000;
+export const SUMMARISE_TRANSCRIPT_MAX_CHARS = 6000;
 export const DUPLICATE_LOOKBACK = 30;
 export const DEFAULT_DUPLICATE_THRESHOLD = 0.92;
 export const EXACT_DEDUPE_MS = 2000;
