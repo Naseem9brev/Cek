@@ -6,6 +6,7 @@ import {
 import type {
   ContextUsage,
   MessageCountEntry,
+  PendingContextMatch,
   PromptEntry,
   SessionEntry,
   Settings,
@@ -186,6 +187,23 @@ export async function loadAppState() {
       getContextUsage(),
       import("./knowledge-nodes").then((m) => m.getKnowledgeNodes()),
     ]);
+
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const activeTabId = tabs[0]?.id;
+  let pendingContextMatch: PendingContextMatch | null = null;
+  if (activeTabId !== undefined) {
+    const sessionData = await chrome.storage.session.get(
+      STORAGE_KEYS.pendingContextMatches
+    );
+    const matches =
+      (sessionData[STORAGE_KEYS.pendingContextMatches] as Record<
+        number,
+        PendingContextMatch
+      >) ?? {};
+    const match = matches[activeTabId];
+    if (match && !match.dismissed) pendingContextMatch = match;
+  }
+
   return {
     settings,
     prompts,
@@ -193,6 +211,7 @@ export async function loadAppState() {
     messageCounts,
     contextUsage,
     knowledgeNodes,
+    pendingContextMatch,
   };
 }
 

@@ -71,6 +71,7 @@ export const STORAGE_KEYS = {
   contextUsage: "contextUsage",
   debugLog: "debugLog",
   knowledgeNodes: "knowledgeNodes",
+  pendingContextMatches: "pendingContextMatches",
 } as const;
 
 export const MAX_PROMPTS = 500;
