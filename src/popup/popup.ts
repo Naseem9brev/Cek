@@ -367,6 +367,10 @@ $("settings-btn").addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
+$("graph-btn").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("src/graph/graph.html") });
+});
+
 $("context-inject-btn").addEventListener("click", () => {
   void injectPendingContext();
 });

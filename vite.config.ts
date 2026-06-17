@@ -4,4 +4,11 @@ import manifest from "./manifest.json";
 
 export default defineConfig({
   plugins: [crx({ manifest })],
+  build: {
+    rollupOptions: {
+      input: {
+        graph: "src/graph/graph.html",
+      },
+    },
+  },
 });
