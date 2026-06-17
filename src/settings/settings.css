@@ -9,7 +9,7 @@
 body {
   background: var(--bg-cream);
   color: var(--text-primary);
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   font-size: 14px;
   min-height: 100vh;
 }
