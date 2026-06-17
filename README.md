@@ -44,7 +44,16 @@ Session ends (tab close · 10 min idle · navigate away)
 Groq extracts a KnowledgeNode: topic, entities, decisions, open questions
         │
         ▼
-Node persists locally — your cross-platform memory graph grows automatically
+Node persists locally — your cross-platform memory graph grows
+        │
+        ▼
+You start a fresh chat on another platform
+        │
+        ▼
+cek matches your first prompt against stored nodes (local, no API)
+        │
+        ▼
+One click injects a compact summary into the composer
 ```
 
 No copy-paste. No note-taking. No cloud dashboard. Just chat like you normally do.
@@ -63,6 +72,8 @@ No copy-paste. No note-taking. No cloud dashboard. Just chat like you normally d
 | **Session buffer** | Holds prompt+response *turns* in `chrome.storage.session` — ephemeral, per tab, cleared after summarisation. |
 | **Session summarisation** | On tab close, 10-minute idle, or navigating away from a chat URL, fires one Groq call to extract structured memory. |
 | **Knowledge nodes** | Persistent `KnowledgeNode` records in `chrome.storage.local` — topic, entities, decisions, open questions (200-node cap). |
+| **Context injection** | On a fresh chat, scores your first prompt against stored nodes locally. Surfaces a match via badge, toast, and popup — one click prepends context to the composer. |
+| **Knowledge graph** | Dedicated graph page (vis-network) — nodes by topic, edges by shared entities, filter by platform and date. |
 | **v1 utilities** | Context tracker, prompt history, and tier-based limit counting still run alongside the memory layer. |
 
 ### KnowledgeNode schema
@@ -82,9 +93,61 @@ Each summarised session becomes a searchable memory node:
 
 Raw turn text is **not** stored long-term — only the distilled node persists, keeping storage lean under Chrome's quota.
 
-### What's rolling out next
+---
 
-The v2 build plan also includes **context injection** (suggest relevant past sessions when you start a fresh chat) and a **knowledge graph page** (visualise nodes and connections). Both are in active development.
+## Context injection
+
+When you open a **new or empty chat** and send your first prompt, cek checks whether you've explored this topic before — on any platform. Retrieval is **entirely local** (keyword + fuzzy matching against precomputed node tokens). No Groq call at inject time.
+
+### When it triggers
+
+- Fresh chat: ≤1 user message in the thread, or URL is `/new`
+- At least one `KnowledgeNode` already exists from a prior summarised session
+- Your prompt scores above the match threshold against node topics and entities
+- Runs **once per chat URL** — won't nag on every message
+
+### What you see
+
+| Surface | What happens |
+|---------|----------------|
+| **Extension badge** | `!` on the cek icon for that tab |
+| **On-page toast** | Bottom-right prompt: *"You explored React useEffect cleanup with Claude on Tue"* with **Inject context** / **Dismiss** |
+| **Popup banner** | Same suggestion when you open the popup — **Inject context** or **Dismiss** |
+
+### What gets injected
+
+One click prepends a compact block into the chat composer:
+
+```
+[Context from Cek — explored with Claude on Jun 11]
+Topic: React useEffect cleanup
+Key decisions: use cleanup function to cancel subscriptions
+Open questions: does this apply to async functions?
+---
+```
+
+You stay in control — nothing is injected automatically.
+
+### Try it
+
+1. Enable **Session summarisation** in Settings (requires Groq API key)
+2. Have a focused conversation on Claude — e.g. debugging a React hook — then **close the tab**
+3. Wait a moment for summarisation (check **Graph (1)** in the popup)
+4. Open a **new** ChatGPT chat and send a related first prompt — e.g. *"help me fix useEffect memory leaks"*
+5. Click **Inject context** on the toast or popup banner
+
+---
+
+## Knowledge graph
+
+Open **Graph** from the popup (shows node count, e.g. `Graph (12)`) to explore your memory visually.
+
+- **Nodes** = summarised sessions, labelled by topic, coloured by platform
+- **Edges** = sessions that share entities
+- **Filters** = platform (Claude / ChatGPT) and date range (7d / 30d / all)
+- **Click a node** = full summary, decisions, open questions
+
+Export all nodes as JSON from the popup footer: **Export memory**.
 
 > **Gemini support** is scaffolded and coming after ChatGPT + Claude are fully stable.
 
@@ -100,7 +163,10 @@ The reason cek exists. Your AI chats automatically become structured, cross-plat
 - **Streaming-aware** — MutationObserver waits for the stream to settle before capturing; partial capture on tab close as fallback
 - **Automatic summarisation** — Groq extracts topic, entities, decisions, and open questions from the full conversation
 - **Smart triggers** — summarises on tab close, 10 minutes of inactivity, or navigating away from the chat
+- **Prompt-only fallback** — if a response wasn't captured before the tab closed, your prompt still gets summarised
 - **Local knowledge graph** — up to 200 nodes persisted on your machine, searchable by precomputed tokens
+- **Context injection** — surfaces relevant past sessions on fresh chats (badge + toast + popup); local matching, no API at inject time
+- **Knowledge graph** — vis-network page with platform/date filters; export nodes as JSON
 - **Opt-in** — enable in Settings → **Session summarisation (knowledge graph)** with your own Groq API key
 
 ---
@@ -144,7 +210,7 @@ You spend an hour with Claude debugging a React auth flow — discussing JWT ref
 > **Decisions:** Use httpOnly cookies for refresh tokens  
 > **Open questions:** How to handle SSR with Next.js middleware?
 
-Next morning you open a blank ChatGPT chat to prototype the implementation. Your Claude context isn't lost — it lives in cek's knowledge graph. *(Context injection, coming soon, will surface this automatically when you start typing.)*
+Next morning you open a blank ChatGPT chat to prototype the implementation. cek detects the related topic from your first prompt and offers to inject the Claude session summary — decisions, entities, and open questions — in one click.
 
 **Without cek:** Re-explain the entire auth architecture from scratch.  
 **With cek:** Your decisions and open questions persist across platforms without you lifting a finger.
@@ -216,6 +282,18 @@ Load in Chrome:
 
 Chat normally. Close tabs. Your knowledge graph grows on its own.
 
+### Try context injection
+
+Context injection only works **after** you have memory nodes. Build one first:
+
+1. Chat on Claude about a specific topic (e.g. React auth patterns)
+2. Close the tab — cek summarises the session into a node
+3. Open a **new** ChatGPT chat
+4. Send a related first prompt (e.g. *"JWT refresh token best practices"*)
+5. Click **Inject context** on the toast or popup banner
+
+The popup **Graph** button shows your node count. Open it to see how sessions connect.
+
 ---
 
 ## Development
@@ -233,17 +311,21 @@ After code changes, reload the extension at `chrome://extensions`.
 src/
 ├── background/
 │   ├── service-worker.ts   message routing, v1 features
-│   └── summarisation.ts    turn buffering, idle/tab triggers, Groq summarise
+│   ├── summarisation.ts    turn buffering, idle/tab triggers, Groq summarise
+│   └── context-handlers.ts badge, toast relay, inject/dismiss
 ├── content/
 │   ├── response-capture.ts stream settle detector, TURN_CAPTURED
+│   ├── context-injection.ts fresh-chat matching, toast, composer inject
 │   ├── shared.ts             prompt capture + response watcher hook
 │   ├── chatgpt.ts            ChatGPT selectors
 │   └── claude.ts             Claude selectors
-├── popup/                    history, context bar, search
+├── graph/                    vis-network knowledge graph page
+├── popup/                    history, context bar, match banner, graph link
 ├── settings/                 tiers, Groq, summarisation toggle
 └── lib/
     ├── session-buffer.ts     ephemeral turn storage (chrome.storage.session)
     ├── knowledge-nodes.ts    persistent node storage + search tokens
+    ├── context-match.ts      local fuzzy scorer for injection
     └── groq.ts               summariseSession, embed, titles
 ```
 
@@ -253,6 +335,7 @@ src/
 
 - **Default:** All data stays on your machine in Chrome storage. cek does not phone home.
 - **Memory layer (Groq enabled):** Full conversation turns are sent to Groq's API at session end for summarisation. Raw turn text is discarded after the node is written — only the structured `KnowledgeNode` persists.
+- **Context injection:** Matching runs entirely on-device against stored nodes. No network call when suggesting or injecting context.
 - **v1 smart features (Groq enabled):** Prompt text may also be sent for embeddings, titles, and duplicate detection.
 - **Your API key** is stored locally and never shared with the cek project.
 - **Permissions:** `storage`, `alarms`, `activeTab`, `tabs`, plus host access to `chatgpt.com`, `claude.ai`, and `api.groq.com`.
