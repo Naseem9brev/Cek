@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cek — Example Knowledge Graph</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #1a1f1a;
+        --panel: #faf3e0;
+        --surface: #ffffff;
+        --text: #1a3a1a;
+        --muted: #6b7b6b;
+        --accent: #2d6a2d;
+        --bright: #4caf50;
+        --border: #e0d8c0;
+        --claude: #d97757;
+        --chatgpt: #10a37f;
+        --topic: #5c7cfa;
+        --session: #d4820a;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: #e8e4dc;
+        min-height: 100vh;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: var(--panel);
+        color: var(--text);
+        padding: 24px 20px;
+        border-right: 1px solid var(--border);
+      }
+
+      .wordmark {
+        font-family: "DM Sans", sans-serif;
+        font-weight: 700;
+        font-size: 24px;
+        color: var(--accent);
+        text-transform: lowercase;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 8px 0 20px;
+        line-height: 1.5;
+      }
+
+      .legend {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 4px rgba(26, 58, 26, 0.08);
+      }
+
+      .legend h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .legend-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .detail {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 1px 4px rgba(26, 58, 26, 0.08);
+      }
+
+      .detail h3 {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      .detail p {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .detail .tag {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--border);
+        font-size: 11px;
+      }
+
+      .graph-wrap {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .graph-header {
+        position: absolute;
+        top: 20px;
+        left: 24px;
+        z-index: 2;
+      }
+
+      .graph-header h2 {
+        font-family: "DM Sans", sans-serif;
+        font-size: 18px;
+        font-weight: 500;
+      }
+
+      .graph-header p {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      svg {
+        width: 100%;
+        height: 100vh;
+        display: block;
+      }
+
+      .edge {
+        stroke: rgba(250, 243, 224, 0.18);
+        stroke-width: 1.5;
+        fill: none;
+      }
+
+      .edge.similar {
+        stroke: rgba(76, 175, 80, 0.45);
+        stroke-dasharray: 4 4;
+      }
+
+      .edge.session {
+        stroke: rgba(212, 130, 10, 0.35);
+      }
+
+      .edge.topic {
+        stroke: rgba(92, 124, 250, 0.35);
+      }
+
+      .node-group {
+        cursor: pointer;
+      }
+
+      .node-group:hover circle {
+        stroke: #fff;
+        stroke-width: 2px;
+      }
+
+      .node-group.selected circle {
+        stroke: var(--bright);
+        stroke-width: 3px;
+      }
+
+      .node-label {
+        fill: #faf3e0;
+        font-size: 11px;
+        font-family: Inter, sans-serif;
+        pointer-events: none;
+      }
+
+      .node-label.small {
+        font-size: 9px;
+        fill: #aaa;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        svg {
+          height: 60vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="wordmark">cek</div>
+        <p class="subtitle">
+          Example knowledge graph — how your prompts, sessions, and topics could
+          connect. Illustrative only; not in v1 yet.
+        </p>
+
+        <div class="legend">
+          <h3>Node types</h3>
+          <div class="legend-item">
+            <span class="dot" style="background: var(--claude)"></span>
+            Prompt (Claude)
+          </div>
+          <div class="legend-item">
+            <span class="dot" style="background: var(--chatgpt)"></span>
+            Prompt (ChatGPT)
+          </div>
+          <div class="legend-item">
+            <span class="dot" style="background: var(--session)"></span>
+            Session
+          </div>
+          <div class="legend-item">
+            <span class="dot" style="background: var(--topic)"></span>
+            Topic
+          </div>
+        </div>
+
+        <div class="legend">
+          <h3>Edges</h3>
+          <div class="legend-item">
+            <span style="width: 24px; height: 2px; background: rgba(212,130,10,0.6)"></span>
+            belongs to session
+          </div>
+          <div class="legend-item">
+            <span style="width: 24px; height: 2px; background: rgba(92,124,250,0.6)"></span>
+            tagged topic
+          </div>
+          <div class="legend-item">
+            <span
+              style="
+                width: 24px;
+                height: 0;
+                border-top: 2px dashed rgba(76, 175, 80, 0.8);
+              "
+            ></span>
+            semantically similar
+          </div>
+        </div>
+
+        <div class="detail" id="detail">
+          <h3>Click a node</h3>
+          <p>
+            Explore how prompts cluster by session and topic, and where Groq
+            semantic similarity links rephrased asks.
+          </p>
+        </div>
+      </aside>
+
+      <main class="graph-wrap">
+        <div class="graph-header">
+          <h2>Prompt knowledge graph</h2>
+          <p>Sample data from your cek history · 12 nodes · 14 edges</p>
+        </div>
+        <svg id="graph" viewBox="0 0 900 700"></svg>
+      </main>
+    </div>
+
+    <script>
+      const nodes = [
+        { id: "s1", label: "Explain React useEffect", type: "session", x: 450, y: 120, r: 22 },
+        { id: "s2", label: "Refactor auth middleware", type: "session", x: 680, y: 380, r: 22 },
+        { id: "s3", label: "Cek PRD draft", type: "session", x: 180, y: 320, r: 22 },
+
+        { id: "t1", label: "React", type: "topic", x: 300, y: 220, r: 16 },
+        { id: "t2", label: "Security", type: "topic", x: 780, y: 280, r: 16 },
+        { id: "t3", label: "Product", type: "topic", x: 120, y: 180, r: 16 },
+
+        { id: "p1", label: "useEffect cleanup…", type: "prompt-claude", x: 360, y: 300, r: 14 },
+        { id: "p2", label: "When useEffect needs cleanup?", type: "prompt-claude", x: 520, y: 260, r: 14 },
+        { id: "p3", label: "JWT middleware review", type: "prompt-chatgpt", x: 620, y: 480, r: 14 },
+        { id: "p4", label: "Rate limit on auth routes", type: "prompt-chatgpt", x: 740, y: 520, r: 14 },
+        { id: "p5", label: "Chrome ext PRD…", type: "prompt-claude", x: 240, y: 420, r: 14 },
+        { id: "p6", label: "Prompt history schema", type: "prompt-claude", x: 100, y: 480, r: 14 },
+        { id: "p7", label: "Granola-style UI tokens", type: "prompt-claude", x: 280, y: 540, r: 14 },
+      ];
+
+      const edges = [
+        { from: "p1", to: "s1", kind: "session" },
+        { from: "p2", to: "s1", kind: "session" },
+        { from: "p3", to: "s2", kind: "session" },
+        { from: "p4", to: "s2", kind: "session" },
+        { from: "p5", to: "s3", kind: "session" },
+        { from: "p6", to: "s3", kind: "session" },
+        { from: "p7", to: "s3", kind: "session" },
+
+        { from: "p1", to: "t1", kind: "topic" },
+        { from: "p2", to: "t1", kind: "topic" },
+        { from: "p3", to: "t2", kind: "topic" },
+        { from: "p4", to: "t2", kind: "topic" },
+        { from: "p5", to: "t3", kind: "topic" },
+        { from: "p6", to: "t3", kind: "topic" },
+        { from: "p7", to: "t3", kind: "topic" },
+
+        { from: "p1", to: "p2", kind: "similar" },
+        { from: "p3", to: "p4", kind: "similar" },
+        { from: "p5", to: "p6", kind: "similar" },
+      ];
+
+      const colors = {
+        session: "#d4820a",
+        topic: "#5c7cfa",
+        "prompt-claude": "#d97757",
+        "prompt-chatgpt": "#10a37f",
+      };
+
+      const descriptions = {
+        s1: "Session auto-titled by Groq from your first prompt about React hooks.",
+        s2: "Security-focused thread on Express JWT middleware.",
+        s3: "Building cek — PRD, storage schema, and UI design prompts.",
+        t1: "Topic cluster: React, hooks, useEffect.",
+        t2: "Topic cluster: auth, JWT, rate limits.",
+        t3: "Topic cluster: product, extension, design system.",
+        p1: "Explain useEffect cleanup functions in React — when do you need them?",
+        p2: "Near-duplicate of p1 (similarity 0.94). Flagged by cek.",
+        p3: "Review Express middleware for JWT validation — security gaps?",
+        p4: "Follow-up in same session — rate limiting on auth routes.",
+        p5: "Write a concise PRD for a Chrome extension that tracks AI prompt history.",
+        p6: "Design the chrome.storage schema for prompts and embeddings.",
+        p7: "Define Granola-inspired design tokens for the popup UI.",
+      };
+
+      const svg = document.getElementById("graph");
+      const ns = "http://www.w3.org/2000/svg";
+
+      edges.forEach((e) => {
+        const a = nodes.find((n) => n.id === e.from);
+        const b = nodes.find((n) => n.id === e.to);
+        const line = document.createElementNS(ns, "line");
+        line.setAttribute("x1", a.x);
+        line.setAttribute("y1", a.y);
+        line.setAttribute("x2", b.x);
+        line.setAttribute("y2", b.y);
+        line.setAttribute("class", `edge ${e.kind}`);
+        svg.appendChild(line);
+      });
+
+      nodes.forEach((n) => {
+        const g = document.createElementNS(ns, "g");
+        g.setAttribute("class", "node-group");
+        g.dataset.id = n.id;
+
+        const circle = document.createElementNS(ns, "circle");
+        circle.setAttribute("cx", n.x);
+        circle.setAttribute("cy", n.y);
+        circle.setAttribute("r", n.r);
+        circle.setAttribute("fill", colors[n.type]);
+
+        const label = document.createElementNS(ns, "text");
+        label.setAttribute("x", n.x);
+        label.setAttribute("y", n.y + n.r + 14);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("class", n.type.startsWith("prompt") ? "node-label small" : "node-label");
+        label.textContent = n.label;
+
+        g.appendChild(circle);
+        g.appendChild(label);
+
+        g.addEventListener("click", () => {
+          document.querySelectorAll(".node-group").forEach((el) => el.classList.remove("selected"));
+          g.classList.add("selected");
+          document.getElementById("detail").innerHTML = `
+            <h3>${n.label}</h3>
+            <p>${descriptions[n.id]}</p>
+            <span class="tag">${n.type.replace("prompt-", "").replace("-", " ")}</span>
+          `;
+        });
+
+        svg.appendChild(g);
+      });
+
+      // Pre-select central session
+      document.querySelector('[data-id="s1"]').click();
+    </script>
+  </body>
+</html>
