@@ -138,10 +138,10 @@ export function watchResponse(
   platform: Platform,
   selectors: PlatformSelectors,
   promptText: string,
-  userMessageCount: number
+  turnIndex: number
 ): void {
   pendingTurn = {
-    turnIndex: userMessageCount - 1,
+    turnIndex,
     prompt: promptText,
     startedAt: Date.now(),
   };

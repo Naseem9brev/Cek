@@ -115,6 +115,7 @@ export interface PromptCapturedPayload {
   text: string;
   sessionId: string;
   tabUrl: string;
+  turnIndex: number;
 }
 
 export interface ContextUpdatedPayload {

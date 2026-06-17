@@ -8,6 +8,8 @@ import {
   clearAllBuffersForTab,
   clearSessionBuffer,
   getBuffersForTab,
+  mergeTurnsForSummarisation,
+  recordPendingPrompt as bufferRecordPendingPrompt,
   type SessionBufferEntry,
 } from "../lib/session-buffer";
 import { appendDebugLog, generateId, getSettings } from "../lib/storage";
@@ -41,8 +43,28 @@ export async function handleTurnCaptured(
   );
 }
 
+export async function recordPendingPrompt(
+  tabId: number,
+  sessionId: string,
+  platform: Platform,
+  tabUrl: string,
+  prompt: string,
+  turnIndex: number
+): Promise<void> {
+  await bufferRecordPendingPrompt(
+    tabId,
+    sessionId,
+    platform,
+    tabUrl,
+    prompt,
+    turnIndex
+  );
+  await resetIdleAlarm(tabId);
+}
+
 async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
-  if (entry.turns.length === 0) return;
+  const turns = mergeTurnsForSummarisation(entry);
+  if (turns.length === 0) return;
 
   const settings = await getSettings();
   if (
@@ -55,7 +77,7 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
 
   try {
     const result = await withRetry(() =>
-      summariseSession(settings.groq.apiKey, entry.turns, entry.platform)
+      summariseSession(settings.groq.apiKey, turns, entry.platform)
     );
 
     await addKnowledgeNode({
@@ -67,7 +89,7 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
       openQuestions: result.openQuestions,
       platform: entry.platform,
       date: Date.now(),
-      turnCount: entry.turns.length,
+      turnCount: turns.length,
     });
 
     await appendDebugLog(
