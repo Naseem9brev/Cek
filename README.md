@@ -5,8 +5,8 @@
 <h1 align="center">cek</h1>
 
 <p align="center">
-  <strong>A quiet co-pilot for ChatGPT and Claude.</strong><br/>
-  Track your context window, log every prompt, and stay ahead of message limits — without leaving the tab.
+  <strong>Your AI conversations build a knowledge base that travels with you.</strong><br/>
+  A passive memory layer above ChatGPT and Claude — no manual input, no backend, no account.
 </p>
 
 <p align="center">
@@ -18,77 +18,111 @@
 
 ---
 
-## What is cek?
+## The problem
 
-**cek** is a personal Chrome extension that sits quietly beside your AI workflows. While you chat on ChatGPT or Claude, it runs in the background and does three things well:
+Every time you switch platforms (Claude → ChatGPT) or start a new chat, all context is lost. You rebuild the same background, re-explain the same decisions, and re-ask questions you already answered.
 
-1. **Remembers what you asked** — every prompt you send is captured automatically and organized by session.
-2. **Shows how much context you've burned** — a live token estimate and progress bar for the conversation you're in right now.
-3. **Counts toward your limits** — tier-aware message tracking so you know when you're running low before the platform tells you.
+**cek fixes this passively.** While you chat, it captures full prompt+response turns, summarises sessions into structured memory nodes, and keeps that knowledge on your machine — ready to surface when you need it again.
 
-No account. No cloud dashboard. Everything lives in your browser unless you opt into optional smart features powered by [Groq](https://groq.com).
+---
 
-> **Gemini support is on the way.** The codebase is scaffolded; content-script integration is coming in a future release.
+## How it works
+
+```
+You chat on ChatGPT or Claude
+        │
+        ▼
+cek captures each prompt + AI response (waits for streaming to finish)
+        │
+        ▼
+Turns buffer in the session (ephemeral, per tab)
+        │
+        ▼
+Session ends (tab close · 10 min idle · navigate away)
+        │
+        ▼
+Groq extracts a KnowledgeNode: topic, entities, decisions, open questions
+        │
+        ▼
+Node persists locally — your cross-platform memory graph grows automatically
+```
+
+No copy-paste. No note-taking. No cloud dashboard. Just chat like you normally do.
 
 ---
 
 ## Architecture
 
-cek follows a classic Manifest V3 layout: lightweight content scripts on each AI site, a central service worker for all logic, and a popup for at-a-glance status.
-
 <p align="center">
-  <img src="docs/architecture.svg" alt="cek system architecture diagram" width="860" />
+  <img src="docs/architecture.jpg" alt="cek persistent memory layer architecture diagram" width="900" />
 </p>
 
-| Layer | Role |
-|-------|------|
-| **Content scripts** | Inject into `chatgpt.com` and `claude.ai`. Listen for send events, scrape conversation length, detect the active model. |
-| **Service worker** | Single source of truth. Handles prompt capture, deduplication, token math, limit windows, session titles, and semantic search. |
-| **Popup & Settings** | Read state via `GET_STATE`. Search, pin, export prompts. Configure tiers and optional Groq features. |
-| **Local storage** | `chrome.storage.local` holds prompts, sessions, embeddings, message counts, and context usage — up to 500 prompts (pinned prompts are never pruned). |
-| **Groq (optional)** | When enabled with your own API key, prompt text is sent to Groq for embeddings, auto-titles, and near-duplicate detection. |
+| Component | What it does |
+|-----------|--------------|
+| **Response capture** | Watches the assistant DOM after each send. Uses a stream-settle detector (1.5s quiet + no streaming indicator) before storing the full response. |
+| **Session buffer** | Holds prompt+response *turns* in `chrome.storage.session` — ephemeral, per tab, cleared after summarisation. |
+| **Session summarisation** | On tab close, 10-minute idle, or navigating away from a chat URL, fires one Groq call to extract structured memory. |
+| **Knowledge nodes** | Persistent `KnowledgeNode` records in `chrome.storage.local` — topic, entities, decisions, open questions (200-node cap). |
+| **v1 utilities** | Context tracker, prompt history, and tier-based limit counting still run alongside the memory layer. |
 
-### Data flow
+### KnowledgeNode schema
 
+Each summarised session becomes a searchable memory node:
+
+```json
+{
+  "topic": "React useEffect cleanup patterns",
+  "entities": ["useEffect", "subscriptions", "async cleanup"],
+  "decisions": ["Always return cleanup fn for event listeners"],
+  "openQuestions": ["Does this apply to async functions in effects?"],
+  "platform": "claude",
+  "turnCount": 12
+}
 ```
-You send a prompt on ChatGPT or Claude
-        │
-        ▼
-Content script captures text + session ID
-        │
-        ▼
-Service worker stores prompt, increments limit counter,
-optionally embeds via Groq, groups into session
-        │
-        ▼
-Popup reflects updated history, context bar, and remaining messages
-```
+
+Raw turn text is **not** stored long-term — only the distilled node persists, keeping storage lean under Chrome's quota.
+
+### What's rolling out next
+
+The v2 build plan also includes **context injection** (suggest relevant past sessions when you start a fresh chat) and a **knowledge graph page** (visualise nodes and connections). Both are in active development.
+
+> **Gemini support** is scaffolded and coming after ChatGPT + Claude are fully stable.
 
 ---
 
 ## Features
 
-### Prompt history
+### Persistent memory layer *(hero feature)*
 
-Every prompt you send is logged automatically — no copy-paste, no manual saving. History is grouped by conversation session, searchable by keyword, and pin-worthy for prompts you want to keep forever.
+The reason cek exists. Your AI chats automatically become structured, cross-platform memory.
 
-- Auto-capture on Enter or Send button click
-- Session grouping with optional AI-generated titles (Groq)
-- Pin, delete, and export pinned prompts as JSON
-- Exact deduplication within 2 seconds; near-duplicate detection via embeddings (Groq)
+- **Full turn capture** — prompt and assistant response stored together, not prompts in isolation
+- **Streaming-aware** — MutationObserver waits for the stream to settle before capturing; partial capture on tab close as fallback
+- **Automatic summarisation** — Groq extracts topic, entities, decisions, and open questions from the full conversation
+- **Smart triggers** — summarises on tab close, 10 minutes of inactivity, or navigating away from the chat
+- **Local knowledge graph** — up to 200 nodes persisted on your machine, searchable by precomputed tokens
+- **Opt-in** — enable in Settings → **Session summarisation (knowledge graph)** with your own Groq API key
 
-### Context tracker
+---
 
-See how full your current conversation is before you hit the wall.
+### Also built in
 
-- Scrapes visible message blocks and estimates tokens (`chars ÷ 4`)
-- Progress bar turns amber at 70%, red at 90%
-- Model-aware limits (GPT-4o → 128k, Claude Sonnet/Opus → 200k)
-- Optional floating badge on the page (Settings → Advanced)
+These v1 features still run quietly alongside the memory layer:
 
-### Daily & rolling limits
+<details>
+<summary><strong>Prompt history</strong> — auto-captured prompts, session grouping, pin/search/export</summary>
 
-Set your subscription tier once; cek tracks messages against platform-specific windows.
+Every prompt is logged on send. Search by keyword, pin favourites, export as JSON. Optional Groq features: semantic search, auto session titles, near-duplicate detection.
+</details>
+
+<details>
+<summary><strong>Context tracker</strong> — live token estimate with progress bar</summary>
+
+Scrapes visible messages, estimates tokens (`chars ÷ 4`), shows amber/red warnings at 70%/90%. Model-aware limits (GPT-4o → 128k, Claude Sonnet → 200k).
+</details>
+
+<details>
+<summary><strong>Daily & rolling limits</strong> — tier-aware message counting</summary>
 
 | Platform | Tier | Window | Approx. limit |
 |----------|------|--------|---------------|
@@ -96,56 +130,62 @@ Set your subscription tier once; cek tracks messages against platform-specific w
 | ChatGPT | Plus | 3 h | 80 messages |
 | Claude | Free | 24 h | 20 messages |
 | Claude | Pro | 5 h | 45 messages |
-
-Remaining counts appear in the popup platform strip (`~12 left`). Windows reset automatically via a 15-minute background alarm.
-
-### Smart features (optional, Groq)
-
-Bring your own [Groq API key](https://console.groq.com). Prompt text is only sent to Groq when smart features are enabled.
-
-| Feature | What it does |
-|---------|--------------|
-| **Semantic search** | Find past prompts by meaning, not just keywords |
-| **Auto session titles** | First prompt in a thread gets a 4–7 word title |
-| **Near-duplicate detection** | Flags or skips prompts too similar to recent ones (configurable threshold) |
+</details>
 
 ---
 
 ## Example use cases
 
-### 1. Long research thread — don't lose context
+### 1. Claude deep-dive → fresh ChatGPT thread *(the core promise)*
 
-You're deep in a 40-message ChatGPT research session about market sizing. The context bar shows you're at ~85k of 128k tokens. You pause, switch to Claude for a second opinion, then come back — cek's popup still has every prompt from the ChatGPT thread, grouped under an auto-titled session like *"SaaS market sizing assumptions"*.
+You spend an hour with Claude debugging a React auth flow — discussing JWT refresh, cookie vs localStorage, and middleware patterns. You close the tab. cek captures every turn, waits for the stream to finish on each response, and when the session ends Groq summarises it into a node:
 
-**Without cek:** Scroll forever or re-ask questions you already explored.  
-**With cek:** Glance at the popup, search "pricing model", copy the exact prompt you used two hours ago.
+> **Topic:** React auth middleware patterns  
+> **Decisions:** Use httpOnly cookies for refresh tokens  
+> **Open questions:** How to handle SSR with Next.js middleware?
 
----
+Next morning you open a blank ChatGPT chat to prototype the implementation. Your Claude context isn't lost — it lives in cek's knowledge graph. *(Context injection, coming soon, will surface this automatically when you start typing.)*
 
-### 2. Hitting ChatGPT Plus limits before a deadline
-
-You're on ChatGPT Plus with an 80-message / 3-hour window. The popup shows `ChatGPT ~6 left`. You batch your remaining questions, save the important ones as pinned prompts, and switch to Claude for the rest — without accidentally burning your last messages on near-identical rephrases (Groq near-duplicate detection can skip or flag those).
-
-**Without cek:** Hit the limit mid-task with no warning.  
-**With cek:** Plan around the counter and avoid redundant sends.
+**Without cek:** Re-explain the entire auth architecture from scratch.  
+**With cek:** Your decisions and open questions persist across platforms without you lifting a finger.
 
 ---
 
-### 3. Reusing your best prompts across platforms
+### 2. Research sprint across three sessions
 
-You crafted a great system-style prompt on Claude for code review. A week later you want something similar on ChatGPT. You open cek, search "code review checklist", find the original, pin it, and adapt it — or use semantic search (Groq) to find prompts about "reviewing pull requests" even if you never used those exact words.
+You're doing competitive analysis — one ChatGPT thread for pricing, a Claude thread for feature matrices, another ChatGPT thread for GTM. Each tab close triggers summarisation. After a week you have a dozen knowledge nodes: entities like competitor names, decisions like pricing positioning, open questions about enterprise tiers.
 
-**Without cek:** Dig through browser history or re-write from memory.  
-**With cek:** Your prompt library travels with you across AI tabs.
+Search your memory graph for "enterprise pricing" and find the node from Tuesday's Claude session — even though you never typed those exact words in the topic field.
+
+**Without cek:** Three siloed conversations, nothing connected.  
+**With cek:** A growing, structured knowledge base built entirely passively.
 
 ---
 
-### 4. Debugging a flaky conversation
+### 3. Long streaming response — captured correctly
 
-A Claude thread starts giving weird answers. You toggle debug mode in Settings, enable the on-page context badge, and watch token usage climb as you paste in large files. You export pinned prompts as JSON for your notes and start a fresh thread with a cleaner, shorter opener pulled from history.
+You ask Claude to generate a 2,000-word architecture doc. The response streams for 45 seconds. cek's settle detector waits until streaming indicators disappear and the DOM is quiet for 1.5 seconds — then captures the complete response, not a partial chunk. The full turn enters the session buffer and gets summarised when you move on.
 
-**Without cek:** Guess whether context overflow is the problem.  
-**With cek:** See estimated token usage in real time and keep an audit trail.
+**Without cek:** Only your prompt is saved; the AI's actual answer is gone.  
+**With cek:** The full exchange is captured and distilled into durable memory.
+
+---
+
+### 4. Idle session auto-saves while you context-switch
+
+You're mid-conversation on ChatGPT but get pulled into a meeting. You leave the tab open, switch to Slack for 15 minutes. After 10 minutes of inactivity, cek triggers summarisation automatically — your partial session becomes a knowledge node before you even come back.
+
+**Without cek:** Context lives only in a stale browser tab.  
+**With cek:** Inactivity is a feature, not a failure mode.
+
+---
+
+### 5. Staying under limits while building memory
+
+You're on ChatGPT Plus (`~12 left` in the popup). You batch final questions, knowing each one still feeds the memory layer. When you hit the limit, switch to Claude — your accumulated knowledge nodes from the ChatGPT session are already summarised and stored.
+
+**Without cek:** Platform limits break your flow and lose context.  
+**With cek:** Limits inform your routing; memory outlives any single platform's cap.
 
 ---
 
@@ -166,12 +206,15 @@ Load in Chrome:
 2. Enable **Developer mode**
 3. Click **Load unpacked** and select the `dist` folder
 
-### First-run setup
+### Enable the memory layer
 
 1. Click the cek icon (or press **Alt+Shift+C**)
 2. Open **Settings** (gear icon)
-3. Set your ChatGPT and Claude subscription tiers
-4. Optionally add a Groq API key for smart features
+3. Add your [Groq API key](https://console.groq.com)
+4. Enable **Smart features** and **Session summarisation (knowledge graph)**
+5. Set your ChatGPT / Claude subscription tiers (for limit tracking)
+
+Chat normally. Close tabs. Your knowledge graph grows on its own.
 
 ---
 
@@ -188,19 +231,30 @@ After code changes, reload the extension at `chrome://extensions`.
 
 ```
 src/
-├── background/       service-worker.ts — core logic & message routing
-├── content/          chatgpt.ts, claude.ts, shared.ts — DOM capture
-├── popup/            extension popup UI
-├── settings/         options page (tiers, Groq, advanced)
-└── lib/              storage, tokens, windows, groq, embeddings, duplicates
+├── background/
+│   ├── service-worker.ts   message routing, v1 features
+│   └── summarisation.ts    turn buffering, idle/tab triggers, Groq summarise
+├── content/
+│   ├── response-capture.ts stream settle detector, TURN_CAPTURED
+│   ├── shared.ts             prompt capture + response watcher hook
+│   ├── chatgpt.ts            ChatGPT selectors
+│   └── claude.ts             Claude selectors
+├── popup/                    history, context bar, search
+├── settings/                 tiers, Groq, summarisation toggle
+└── lib/
+    ├── session-buffer.ts     ephemeral turn storage (chrome.storage.session)
+    ├── knowledge-nodes.ts    persistent node storage + search tokens
+    └── groq.ts               summariseSession, embed, titles
 ```
 
 ---
 
 ## Privacy
 
-- **Default:** All data stays in `chrome.storage.local` on your machine. cek does not phone home.
-- **With Groq enabled:** Prompt text is sent to Groq's API for embeddings and title generation. Your API key is stored locally and never shared with the cek project.
+- **Default:** All data stays on your machine in Chrome storage. cek does not phone home.
+- **Memory layer (Groq enabled):** Full conversation turns are sent to Groq's API at session end for summarisation. Raw turn text is discarded after the node is written — only the structured `KnowledgeNode` persists.
+- **v1 smart features (Groq enabled):** Prompt text may also be sent for embeddings, titles, and duplicate detection.
+- **Your API key** is stored locally and never shared with the cek project.
 - **Permissions:** `storage`, `alarms`, `activeTab`, `tabs`, plus host access to `chatgpt.com`, `claude.ai`, and `api.groq.com`.
 
 ---
