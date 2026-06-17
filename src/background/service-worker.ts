@@ -37,6 +37,11 @@ import {
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import type { Platform } from "../lib/constants";
 import { getKnowledgeNodes } from "../lib/knowledge-nodes";
+import {
+  handleTurnCaptured,
+  initSummarisationListeners,
+  resetIdleAlarm,
+} from "./summarisation";
 
 const lastExactPrompt = new Map<string, { text: string; at: number }>();
 
@@ -169,6 +174,7 @@ async function handlePromptCaptured(
   }
 
   await saveMessageCounts(messageCounts);
+  void resetIdleAlarm(tabId);
   return { ok: true, promptId: prompt.id, duplicateOf, skipped };
 }
 
@@ -305,6 +311,14 @@ chrome.runtime.onMessage.addListener(
           case "PROMPT_CAPTURED":
             sendResponse(await handlePromptCaptured(message.payload, tabId));
             break;
+          case "TURN_CAPTURED":
+            await handleTurnCaptured(
+              message.payload,
+              tabId,
+              sender.tab?.url ?? ""
+            );
+            sendResponse({ ok: true });
+            break;
           case "CONTEXT_UPDATED":
             await handleContextUpdated(message.payload, tabId);
             sendResponse({ ok: true });
@@ -362,3 +376,5 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
   }
 });
+
+initSummarisationListeners();
