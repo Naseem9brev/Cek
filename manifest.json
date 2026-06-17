@@ -3,14 +3,26 @@
   "name": "cek",
   "version": "1.0.0",
   "description": "Quiet co-pilot for ChatGPT and Claude — prompt history and context tracking.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "alarms", "activeTab", "tabs"],
+  "host_permissions": ["https://api.groq.com/*"],
   "action": {
     "default_title": "cek",
     "default_popup": "src/popup/popup.html"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
   },
   "icons": {
     "16": "public/icons/icon16.png",
     "48": "public/icons/icon48.png",
     "128": "public/icons/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+C"
+      }
+    }
   }
 }
