@@ -36,7 +36,12 @@ import {
 } from "../lib/windows";
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import type { Platform } from "../lib/constants";
-import { getKnowledgeNodes } from "../lib/knowledge-nodes";
+import {
+  handleContextMatchFound,
+  handleDismissContextMatch,
+  handleGetKnowledgeNodes,
+  handleInjectContext,
+} from "./context-handlers";
 import {
   handleTurnCaptured,
   initSummarisationListeners,
@@ -330,7 +335,20 @@ chrome.runtime.onMessage.addListener(
             sendResponse({ ok: true, state: await loadAppState() });
             break;
           case "GET_KNOWLEDGE_NODES":
-            sendResponse({ ok: true, nodes: await getKnowledgeNodes() });
+            sendResponse(await handleGetKnowledgeNodes());
+            break;
+          case "CONTEXT_MATCH_FOUND":
+            sendResponse(
+              await handleContextMatchFound(message.payload, tabId)
+            );
+            break;
+          case "DISMISS_CONTEXT_MATCH":
+            sendResponse(await handleDismissContextMatch(tabId));
+            break;
+          case "INJECT_CONTEXT":
+            sendResponse(
+              await handleInjectContext(tabId, message.nodeId)
+            );
             break;
           case "UPDATE_PROMPT":
             sendResponse(

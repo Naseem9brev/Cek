@@ -79,6 +79,19 @@ export interface TurnCapturedPayload {
   partial?: boolean;
 }
 
+export interface ContextMatchPayload {
+  tabId: number;
+  nodeId: string;
+  score: number;
+}
+
+export interface PendingContextMatch {
+  tabId: number;
+  node: KnowledgeNode;
+  score: number;
+  dismissed?: boolean;
+}
+
 export interface PlatformSettings {
   enabled: boolean;
   tier: string;
@@ -114,6 +127,9 @@ export type BackgroundMessage =
   | { type: "PROMPT_CAPTURED"; payload: PromptCapturedPayload }
   | { type: "TURN_CAPTURED"; payload: TurnCapturedPayload }
   | { type: "CONTEXT_UPDATED"; payload: ContextUpdatedPayload }
+  | { type: "CONTEXT_MATCH_FOUND"; payload: ContextMatchPayload }
+  | { type: "DISMISS_CONTEXT_MATCH"; tabId: number }
+  | { type: "INJECT_CONTEXT"; tabId: number; nodeId: string }
   | { type: "SEMANTIC_SEARCH"; query: string }
   | { type: "GET_STATE" }
   | { type: "GET_KNOWLEDGE_NODES" }
@@ -125,6 +141,7 @@ export type BackgroundResponse =
   | { ok: true; results?: Array<{ id: string; score: number }> }
   | { ok: true; state?: AppState }
   | { ok: true; nodes?: KnowledgeNode[] }
+  | { ok: true; pendingMatch?: PendingContextMatch | null }
   | { ok: true; data?: string }
   | { ok: false; error: string };
 
@@ -135,6 +152,7 @@ export interface AppState {
   messageCounts: Partial<Record<Platform, MessageCountEntry>>;
   contextUsage: ContextUsage | null;
   knowledgeNodes: KnowledgeNode[];
+  pendingContextMatch: PendingContextMatch | null;
 }
 
 export function sendBackgroundMessage(
