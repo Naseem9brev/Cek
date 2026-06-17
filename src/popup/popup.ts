@@ -38,6 +38,7 @@ function render(): void {
   renderSetupBanner();
   renderGroqIndicator();
   renderContextMatchBanner();
+  renderGraphButton();
   renderPlatformStrip();
   renderContext();
   renderSemanticButton();
@@ -58,6 +59,12 @@ function renderContextMatchBanner(): void {
     weekday: "short",
   });
   $("context-match-text").textContent = `You explored "${match.node.topic}" with ${platform} on ${date} — inject context?`;
+}
+
+function renderGraphButton(): void {
+  const btn = $("graph-btn");
+  const count = state!.knowledgeNodes.length;
+  btn.textContent = count > 0 ? `Graph (${count})` : "Graph";
 }
 
 async function injectPendingContext(): Promise<void> {
