@@ -70,7 +70,7 @@ export function showContextToast(node: KnowledgeNode, onInject: () => void): voi
       You explored <strong>${escapeHtml(node.topic)}</strong> with ${platform} on ${date}.
     </p>
     <div style="display:flex;gap:8px">
-      <button id="cek-inject-btn" style="flex:1;padding:6px 10px;border:none;border-radius:999px;background:#2d6a2d;color:#fff;font:inherit;cursor:pointer">Inject context</button>
+      <button id="cek-inject-btn" style="flex:1;padding:6px 10px;border:none;border-radius:999px;background:linear-gradient(180deg,#d4896a,#b85c38);color:#fff;font:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(184,92,56,0.28)">Inject context</button>
       <button id="cek-dismiss-btn" style="padding:6px 10px;border:1px solid #E0D8C0;border-radius:999px;background:#fff;color:#1A3A1A;font:inherit;cursor:pointer">Dismiss</button>
     </div>
   `;
