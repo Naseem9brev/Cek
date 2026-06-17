@@ -24,12 +24,16 @@ interface VisDataSet {
 }
 
 interface GraphNetwork {
-  on: (event: string, cb: (params: ClickParams & { node?: string }) => void) => void;
+  on: (event: string, cb: (params: HoverParams & ClickParams) => void) => void;
   setData: (data: { nodes: VisDataSet; edges: VisDataSet }) => void;
   fit: (options?: { animation?: boolean }) => void;
   getConnectedNodes: (nodeId: string) => string[];
   getConnectedEdges: (nodeId: string) => string[];
   focus: (nodeId: string, options?: { scale?: number; animation?: boolean }) => void;
+}
+
+interface HoverParams {
+  node?: string;
 }
 
 interface ClickParams {
@@ -89,12 +93,14 @@ const CLUSTER_PALETTE = [
   "#e85a5a",
 ];
 
+const DIM_OPACITY = 0.12;
 const NORMAL_OPACITY = 1;
 
 let allNodes: KnowledgeNode[] = [];
 let filterPlatform: Platform | "all" = "all";
 let filterDays: number | "all" = "all";
 let graphView: GraphView = "sessions";
+let searchQuery = "";
 let network: GraphNetwork | null = null;
 let nodeDataset: VisDataSet | null = null;
 let edgeDataset: VisDataSet | null = null;
@@ -331,6 +337,98 @@ function networkOptions(): Record<string, unknown> {
   };
 }
 
+function applySearchDim(): void {
+  if (!nodeDataset || !edgeDataset) return;
+  const q = searchQuery.trim().toLowerCase();
+  const nodes = nodeDataset.get() as GraphNode[];
+  const edges = edgeDataset.get() as GraphEdge[];
+
+  if (!q) {
+    nodeDataset.update(
+      nodes.map((n) => ({ id: n.id, opacity: NORMAL_OPACITY }))
+    );
+    edgeDataset.update(
+      edges.map((e) => ({ id: e.id, opacity: NORMAL_OPACITY }))
+    );
+    return;
+  }
+
+  const matching = new Set(
+    nodes
+      .filter(
+        (n) =>
+          n.label.toLowerCase().includes(q) ||
+          (n.title?.toLowerCase().includes(q) ?? false)
+      )
+      .map((n) => n.id)
+  );
+
+  const highlight = new Set(matching);
+  if (network) {
+    for (const id of matching) {
+      for (const conn of network.getConnectedNodes(id)) highlight.add(conn);
+    }
+  }
+
+  nodeDataset.update(
+    nodes.map((n) => ({
+      id: n.id,
+      opacity: highlight.has(n.id) ? NORMAL_OPACITY : DIM_OPACITY,
+    }))
+  );
+  edgeDataset.update(
+    edges.map((e) => ({
+      id: e.id,
+      opacity:
+        highlight.has(e.from) && highlight.has(e.to)
+          ? NORMAL_OPACITY
+          : DIM_OPACITY,
+    }))
+  );
+}
+
+function applyHoverDim(nodeId: string | undefined): void {
+  if (!nodeDataset || !edgeDataset || !network) return;
+
+  if (!nodeId) {
+    if (searchQuery.trim()) {
+      applySearchDim();
+    } else {
+      const nodes = nodeDataset.get() as GraphNode[];
+      const edges = edgeDataset.get() as GraphEdge[];
+      nodeDataset.update(
+        nodes.map((n) => ({ id: n.id, opacity: NORMAL_OPACITY }))
+      );
+      edgeDataset.update(
+        edges.map((e) => ({ id: e.id, opacity: NORMAL_OPACITY }))
+      );
+    }
+    return;
+  }
+
+  const connected = new Set([
+    nodeId,
+    ...network.getConnectedNodes(nodeId),
+  ]);
+  const connectedEdges = new Set(network.getConnectedEdges(nodeId));
+
+  const nodes = nodeDataset.get() as GraphNode[];
+  const edges = edgeDataset.get() as GraphEdge[];
+
+  nodeDataset.update(
+    nodes.map((n) => ({
+      id: n.id,
+      opacity: connected.has(n.id) ? 1 : DIM_OPACITY,
+    }))
+  );
+  edgeDataset.update(
+    edges.map((e) => ({
+      id: e.id,
+      opacity: connectedEdges.has(e.id) ? 1 : DIM_OPACITY,
+    }))
+  );
+}
+
 function renderGraph(): void {
   const knowledge = filteredKnowledgeNodes();
   const isEmpty = knowledge.length === 0;
@@ -372,6 +470,7 @@ function renderGraph(): void {
     edgeDataset.add(graphEdges);
   }
 
+  applySearchDim();
   updateInsightPanel(knowledge, graphNodes, entityMeta);
   updateFooter(graphNodes.length, graphEdges.length);
 
@@ -380,6 +479,14 @@ function renderGraph(): void {
 
 function bindNetworkEvents(): void {
   if (!network) return;
+
+  network.on("hoverNode", (params) => {
+    applyHoverDim(params.node);
+  });
+
+  network.on("blurNode", () => {
+    applyHoverDim(undefined);
+  });
 
   network.on("click", (params) => {
     if (params.nodes.length) {
@@ -589,6 +696,7 @@ $("date-filter").addEventListener("change", (e) => {
 
 $("graph-search").addEventListener("input", (e) => {
   searchQuery = (e.target as HTMLInputElement).value;
+  applySearchDim();
 });
 
 $("fit-btn").addEventListener("click", () => {
