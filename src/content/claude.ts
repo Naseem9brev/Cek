@@ -14,8 +14,14 @@ const selectors: PlatformSelectors = {
   messageBlocks: [
     '[data-testid="user-message"]',
     '.font-user-message',
-    '[data-is-streaming="false"]',
   ],
+  assistantBlocks: [
+    '[data-testid="assistant-message"]',
+    '.font-claude-message',
+    '[data-is-streaming]',
+  ],
+  streamingIndicator: ['[data-is-streaming="true"]'],
+  conversationRoot: ["main", '[data-testid="conversation"]', "body"],
   modelLabel: [
     '[data-testid="model-selector-dropdown"]',
     'button[aria-haspopup="listbox"]',

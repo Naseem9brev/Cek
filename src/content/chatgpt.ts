@@ -16,6 +16,9 @@ const selectors: PlatformSelectors = {
     '[data-message-author-role="user"]',
     'div[data-testid*="user"]',
   ],
+  assistantBlocks: ['[data-message-author-role="assistant"]'],
+  streamingIndicator: ['button[data-testid="stop-button"]'],
+  conversationRoot: ["main", '[role="main"]', "#thread"],
   modelLabel: [
     '[data-testid="model-switcher-dropdown-button"]',
     'button[data-testid="model-switcher"]',

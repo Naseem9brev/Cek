@@ -3,12 +3,16 @@ import type { Platform } from "../lib/constants";
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import { sendBackgroundMessage } from "../lib/messaging";
 import { sessionIdFromUrl } from "../lib/storage";
+import { initPartialCapture, watchResponse } from "./response-capture";
 
 export interface PlatformSelectors {
   composer: string[];
   sendButton: string[];
   messageBlocks: string[];
   modelLabel: string[];
+  assistantBlocks: string[];
+  streamingIndicator: string[];
+  conversationRoot: string[];
 }
 
 let lastSubmit = { text: "", at: 0 };
@@ -70,7 +74,7 @@ async function capturePrompt(
   platform: Platform,
   text: string,
   modelLabel: string,
-  messageSelectors: string[]
+  selectors: PlatformSelectors
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
@@ -94,7 +98,10 @@ async function capturePrompt(
     },
   });
 
-  void updateContext(platform, modelLabel, messageSelectors);
+  const userCount = queryAll(selectors.messageBlocks).length;
+  watchResponse(platform, selectors, trimmed, userCount);
+
+  void updateContext(platform, modelLabel, selectors.messageBlocks);
 }
 
 async function updateContext(
@@ -136,7 +143,7 @@ export function initCapture(
     if (!composer) return;
     const text = readComposerText(composer);
     const modelLabel = readModelLabel(selectors.modelLabel, defaultModel);
-    void capturePrompt(platform, text, modelLabel, selectors.messageBlocks);
+    void capturePrompt(platform, text, modelLabel, selectors);
   };
 
   document.addEventListener(
@@ -170,6 +177,8 @@ export function initCapture(
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+
+  initPartialCapture(platform, selectors);
 
   const modelLabel = readModelLabel(selectors.modelLabel, defaultModel);
   scheduleContextUpdate(platform, modelLabel, selectors.messageBlocks);
