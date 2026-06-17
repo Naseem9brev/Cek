@@ -185,9 +185,10 @@ function filterPrompts(prompts: PromptEntry[]): PromptEntry[] {
   return list;
 }
 
-function createPromptRow(p: PromptEntry): HTMLElement {
+function createPromptRow(p: PromptEntry, staggerIndex = 0): HTMLElement {
   const row = document.createElement("div");
   row.className = `prompt-row${p.duplicateOf ? " duplicate" : ""}${expandedIds.has(p.id) ? " expanded" : ""}`;
+  row.style.setProperty("--stagger-index", String(staggerIndex));
   row.dataset.id = p.id;
 
   const icon = document.createElement("img");
@@ -290,9 +291,9 @@ function renderPinned(): void {
     return;
   }
   list.classList.remove("hidden");
-  for (const p of pinned) {
-    list.appendChild(createPromptRow(p));
-  }
+  pinned.forEach((p, i) => {
+    list.appendChild(createPromptRow(p, i));
+  });
 }
 
 function renderHistory(): void {
@@ -323,9 +324,9 @@ function renderHistory(): void {
     });
     header.textContent = `${date} · ${sessionTitle(sessionId, session)}`;
     group.appendChild(header);
-    for (const p of prompts) {
-      group.appendChild(createPromptRow(p));
-    }
+    prompts.forEach((p, i) => {
+      group.appendChild(createPromptRow(p, i));
+    });
     list.appendChild(group);
   }
 }
