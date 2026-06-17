@@ -6,7 +6,7 @@
     <title>cek — Knowledge graph</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@700&family=Inter:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link
@@ -16,36 +16,89 @@
     <link rel="stylesheet" href="./graph.css" />
   </head>
   <body>
-    <header class="graph-header">
-      <div class="header-left">
-        <h1 class="wordmark">cek</h1>
-        <span class="subtitle">knowledge graph</span>
+    <aside id="insight-panel" class="insight-panel">
+      <div class="panel-brand">
+        <span class="wordmark">cek</span>
+        <span class="panel-sub">knowledge graph</span>
       </div>
-      <button id="settings-btn" class="link-btn" type="button">Settings</button>
-    </header>
 
-    <div class="filters">
-      <div id="platform-filters" class="filter-pills"></div>
-      <select id="date-filter" class="date-select">
-        <option value="all">All time</option>
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
-      </select>
-    </div>
+      <section class="panel-section">
+        <h2 class="panel-heading">Overview</h2>
+        <div id="stats-grid" class="stats-grid"></div>
+      </section>
 
-    <div class="graph-layout">
+      <section class="panel-section">
+        <h2 class="panel-heading">Insight</h2>
+        <p id="insight-text" class="insight-text"></p>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="panel-heading">Top connections</h2>
+        <ul id="top-list" class="top-list"></ul>
+      </section>
+
+      <section id="selection-section" class="panel-section hidden">
+        <h2 class="panel-heading">Selected</h2>
+        <div id="selection-detail" class="selection-detail"></div>
+      </section>
+
+      <button id="settings-btn" class="panel-link" type="button">Settings</button>
+    </aside>
+
+    <main class="graph-main">
+      <div class="graph-toolbar">
+        <div class="view-toggle" role="tablist" aria-label="Graph view">
+          <button
+            id="view-sessions"
+            class="view-btn active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+          >
+            Sessions
+          </button>
+          <button
+            id="view-entities"
+            class="view-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+          >
+            Concepts
+          </button>
+        </div>
+
+        <input
+          id="graph-search"
+          class="graph-search"
+          type="search"
+          placeholder="Search graph…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+
+        <div class="toolbar-filters">
+          <div id="platform-filters" class="filter-pills"></div>
+          <select id="date-filter" class="date-select" aria-label="Date range">
+            <option value="all">All time</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+        </div>
+      </div>
+
       <div id="graph-network" class="graph-canvas"></div>
-      <aside id="detail-panel" class="detail-panel hidden">
-        <button id="close-detail" class="close-btn" type="button" aria-label="Close">✕</button>
-        <h2 id="detail-topic"></h2>
-        <p id="detail-meta" class="detail-meta"></p>
-        <div id="detail-entities" class="detail-section"></div>
-        <div id="detail-decisions" class="detail-section"></div>
-        <div id="detail-questions" class="detail-section"></div>
-      </aside>
-    </div>
 
-    <p id="empty-graph" class="empty-graph hidden">No knowledge nodes yet. Chat with summarisation enabled to build your graph.</p>
+      <p id="empty-graph" class="empty-graph hidden">
+        No knowledge nodes yet. Enable session summarisation in Settings, chat on
+        Claude or ChatGPT, then close the tab to build your graph.
+      </p>
+
+      <div class="graph-footer">
+        <span id="footer-status" class="footer-status"></span>
+        <button id="fit-btn" class="footer-btn" type="button">Fit view</button>
+      </div>
+    </main>
 
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <script type="module" src="./graph.ts"></script>
