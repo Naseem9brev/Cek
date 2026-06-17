@@ -4,12 +4,4 @@ import manifest from "./manifest.json";
 
 export default defineConfig({
   plugins: [crx({ manifest })],
-  build: {
-    rollupOptions: {
-      input: {
-        popup: "src/popup/popup.html",
-        settings: "src/settings/settings.html",
-      },
-    },
-  },
 });

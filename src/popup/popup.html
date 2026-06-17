@@ -15,22 +15,22 @@
   <body>
     <div id="app">
       <header class="header">
-        <div class="brand">
-          <span class="wordmark">cek</span>
+        <h1 class="wordmark">cek</h1>
+        <div class="header-actions">
           <span id="groq-indicator" class="groq-indicator hidden" title="Smart features on">✦</span>
+          <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
         </div>
-        <button type="button" id="settings-btn" class="icon-btn" title="Settings">⚙</button>
       </header>
 
       <div id="setup-banner" class="setup-banner hidden">
-        <span>Set up your subscription tiers.</span>
-        <button type="button" id="setup-link" class="link-btn">Open settings</button>
+        <p>Set up your subscription tiers to track daily limits.</p>
+        <button id="setup-link" class="link-btn">Set up your tiers →</button>
       </div>
 
       <div id="platform-strip" class="platform-strip"></div>
 
       <section id="context-section" class="context-section hidden">
-        <div class="context-header">
+        <div class="context-meta">
           <span id="context-model"></span>
           <span id="context-counts" class="mono"></span>
         </div>
@@ -41,24 +41,29 @@
       </section>
 
       <div class="search-row">
-        <input type="search" id="search-input" placeholder="Search prompts…" />
-        <button type="button" id="semantic-btn" class="semantic-btn hidden">Semantic</button>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Search prompts…"
+          autocomplete="off"
+        />
+        <button id="semantic-btn" class="pill-btn hidden" type="button">Semantic</button>
       </div>
 
       <section id="pinned-section" class="pinned-section hidden">
-        <button type="button" id="pinned-toggle" class="section-toggle">
+        <button id="pinned-toggle" class="section-toggle" type="button">
           ▼ Pinned (<span id="pinned-count">0</span>)
         </button>
         <div id="pinned-list" class="prompt-list"></div>
       </section>
 
-      <main class="history">
+      <section id="history-section" class="history-section">
+        <div id="history-list"></div>
         <p id="empty-state" class="empty-state">Nothing yet. Start a conversation.</p>
-        <div id="history-list" class="prompt-list"></div>
-      </main>
+      </section>
 
       <footer class="footer">
-        <button type="button" id="export-btn" class="text-btn">Export pinned</button>
+        <button id="export-btn" class="link-btn" type="button">Export pinned</button>
       </footer>
     </div>
     <script type="module" src="./popup.ts"></script>
