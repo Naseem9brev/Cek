@@ -37,11 +37,48 @@ function render(): void {
   if (!state) return;
   renderSetupBanner();
   renderGroqIndicator();
+  renderContextMatchBanner();
   renderPlatformStrip();
   renderContext();
   renderSemanticButton();
   renderPinned();
   renderHistory();
+}
+
+function renderContextMatchBanner(): void {
+  const banner = $("context-match-banner");
+  const match = state!.pendingContextMatch;
+  if (!match || match.dismissed) {
+    banner.classList.add("hidden");
+    return;
+  }
+  banner.classList.remove("hidden");
+  const platform = PLATFORM_LABELS[match.node.platform];
+  const date = new Date(match.node.date).toLocaleDateString([], {
+    weekday: "short",
+  });
+  $("context-match-text").textContent = `You explored "${match.node.topic}" with ${platform} on ${date} — inject context?`;
+}
+
+async function injectPendingContext(): Promise<void> {
+  const match = state?.pendingContextMatch;
+  if (!match) return;
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabId = tabs[0]?.id;
+  if (tabId === undefined) return;
+  await sendBackgroundMessage({
+    type: "INJECT_CONTEXT",
+    tabId,
+    nodeId: match.node.id,
+  });
+  await loadState();
+}
+
+async function dismissContextMatch(): Promise<void> {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabId = tabs[0]?.id ?? -1;
+  await sendBackgroundMessage({ type: "DISMISS_CONTEXT_MATCH", tabId });
+  await loadState();
 }
 
 function renderSetupBanner(): void {
@@ -328,6 +365,14 @@ async function runSemanticSearch(): Promise<void> {
 
 $("settings-btn").addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
+});
+
+$("context-inject-btn").addEventListener("click", () => {
+  void injectPendingContext();
+});
+
+$("context-dismiss-btn").addEventListener("click", () => {
+  void dismissContextMatch();
 });
 
 $("setup-link").addEventListener("click", () => {
