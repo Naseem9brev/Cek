@@ -3,6 +3,10 @@ import type { Platform } from "../lib/constants";
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import { sendBackgroundMessage } from "../lib/messaging";
 import { sessionIdFromUrl } from "../lib/storage";
+import {
+  checkContextMatch,
+  initContextInjectionListener,
+} from "./context-injection";
 import { initPartialCapture, watchResponse } from "./response-capture";
 
 export interface PlatformSelectors {
@@ -87,6 +91,8 @@ async function capturePrompt(
   lastSubmit = { text: trimmed, at: Date.now() };
 
   const sessionId = extractSessionId(location.href, platform);
+
+  void checkContextMatch(trimmed, platform, selectors.messageBlocks);
 
   await sendBackgroundMessage({
     type: "PROMPT_CAPTURED",
@@ -179,6 +185,7 @@ export function initCapture(
   observer.observe(document.body, { childList: true, subtree: true });
 
   initPartialCapture(platform, selectors);
+  initContextInjectionListener(selectors);
 
   const modelLabel = readModelLabel(selectors.modelLabel, defaultModel);
   scheduleContextUpdate(platform, modelLabel, selectors.messageBlocks);
