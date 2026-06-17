@@ -424,6 +424,19 @@ $("export-btn").addEventListener("click", async () => {
   }
 });
 
+$("export-nodes-btn").addEventListener("click", async () => {
+  const res = await sendBackgroundMessage({ type: "EXPORT_KNOWLEDGE_NODES" });
+  if (res.ok && "data" in res && res.data) {
+    const blob = new Blob([res.data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cek-memory-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local") void loadState();
 });

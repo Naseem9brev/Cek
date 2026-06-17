@@ -36,6 +36,7 @@ import {
 } from "../lib/windows";
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import type { Platform } from "../lib/constants";
+import { getKnowledgeNodes } from "../lib/knowledge-nodes";
 import {
   handleContextMatchFound,
   handleDismissContextMatch,
@@ -303,6 +304,11 @@ async function handleExportPinned(): Promise<BackgroundResponse> {
   };
 }
 
+async function handleExportKnowledgeNodes(): Promise<BackgroundResponse> {
+  const nodes = await getKnowledgeNodes();
+  return { ok: true, data: JSON.stringify(nodes, null, 2) };
+}
+
 chrome.runtime.onMessage.addListener(
   (
     message: BackgroundMessage,
@@ -361,6 +367,9 @@ chrome.runtime.onMessage.addListener(
             break;
           case "EXPORT_PINNED":
             sendResponse(await handleExportPinned());
+            break;
+          case "EXPORT_KNOWLEDGE_NODES":
+            sendResponse(await handleExportKnowledgeNodes());
             break;
           default:
             sendResponse({ ok: false, error: "Unknown message" });
