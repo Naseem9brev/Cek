@@ -150,7 +150,7 @@ async function renderContext(): Promise<void> {
   bar.style.width = `${Math.min(100, pct * 100)}%`;
   bar.className = "progress-fill";
   const color = contextBarColor(pct);
-  if (color !== "green") bar.classList.add(color);
+  if (color !== "ok") bar.classList.add(color);
 
   $("context-readout").textContent = formatTokenReadout(
     usage.estimatedTokens,
