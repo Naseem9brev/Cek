@@ -17,8 +17,8 @@ export function formatTokenReadout(used: number, max: number): string {
   return `~${formatTokenCount(used)} tokens used. ~${formatTokenCount(remaining)} remaining.`;
 }
 
-export function contextBarColor(pct: number): "green" | "amber" | "red" {
+export function contextBarColor(pct: number): "ok" | "amber" | "red" {
   if (pct >= 0.9) return "red";
   if (pct >= 0.7) return "amber";
-  return "green";
+  return "ok";
 }
