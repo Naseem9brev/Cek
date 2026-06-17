@@ -1,0 +1,137 @@
+@import "../styles/tokens.css";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-cream);
+  color: var(--text-primary);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.settings-page {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 500;
+  text-transform: lowercase;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.card h2 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.hint.privacy {
+  padding: 8px 10px;
+  background: var(--bg-cream);
+  border-radius: 8px;
+}
+
+.platform-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.platform-row:last-child {
+  border-bottom: none;
+}
+
+.platform-row.disabled {
+  opacity: 0.5;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.toggle-label.block {
+  margin-bottom: 12px;
+}
+
+select,
+input[type="password"],
+input[type="text"] {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: 13px Inter, sans-serif;
+  background: var(--bg-cream);
+  color: var(--text-primary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.feature-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.mono {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.soon-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.save-status {
+  text-align: center;
+  font-size: 12px;
+  color: var(--accent);
+  min-height: 18px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}

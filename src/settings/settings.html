@@ -2,9 +2,104 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cek — Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./settings.css" />
   </head>
   <body>
-    <p>Settings</p>
+    <main class="settings-page">
+      <h1>Settings</h1>
+
+      <section class="card">
+        <h2>ChatGPT</h2>
+        <label class="row">
+          <input type="checkbox" id="chatgpt-enabled" />
+          Enabled
+        </label>
+        <label class="row">
+          Tier
+          <select id="chatgpt-tier">
+            <option value="free">Free</option>
+            <option value="plus">Plus</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Claude</h2>
+        <label class="row">
+          <input type="checkbox" id="claude-enabled" />
+          Enabled
+        </label>
+        <label class="row">
+          Tier
+          <select id="claude-tier">
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card disabled">
+        <h2>Gemini <span class="badge">Coming soon</span></h2>
+      </section>
+
+      <section class="card">
+        <h2>Smart features (Groq)</h2>
+        <p class="hint">Prompt text is sent to Groq only when smart features are on.</p>
+        <label class="row">
+          <input type="checkbox" id="groq-enabled" />
+          Enable smart features
+        </label>
+        <label class="row">
+          API key
+          <input type="password" id="groq-api-key" placeholder="gsk_…" autocomplete="off" />
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-semantic" />
+          Semantic search
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-titles" />
+          Auto session titles
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-dedupe" />
+          Near-duplicate detection
+        </label>
+        <label class="row">
+          Duplicate sensitivity
+          <input type="range" id="dup-threshold" min="85" max="98" value="92" />
+          <span id="dup-threshold-val">0.92</span>
+        </label>
+        <label class="row">
+          Duplicate action
+          <select id="dup-action">
+            <option value="flag">Flag similar</option>
+            <option value="skip">Skip logging</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Advanced</h2>
+        <label class="row">
+          <input type="checkbox" id="debug-mode" />
+          Debug mode
+        </label>
+        <label class="row">
+          <input type="checkbox" id="on-page-badge" />
+          On-page context badge
+        </label>
+      </section>
+
+      <p id="save-status" class="save-status"></p>
+    </main>
+    <script type="module" src="./settings.ts"></script>
   </body>
 </html>
