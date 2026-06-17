@@ -43,6 +43,7 @@ export interface GroqSettings {
     semanticSearch: boolean;
     sessionTitles: boolean;
     nearDuplicateDetection: boolean;
+    sessionSummarisation: boolean;
   };
   duplicateThreshold: number;
   duplicateAction: "flag" | "skip";

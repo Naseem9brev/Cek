@@ -30,6 +30,8 @@ function bindToForm(): void {
     settings.groq.features.sessionTitles;
   ($("feat-dedupe") as HTMLInputElement).checked =
     settings.groq.features.nearDuplicateDetection;
+  ($("feat-summarise") as HTMLInputElement).checked =
+    settings.groq.features.sessionSummarisation;
   ($("dup-threshold") as HTMLInputElement).value = String(
     Math.round(settings.groq.duplicateThreshold * 100)
   );
@@ -66,6 +68,7 @@ function readFromForm(): Settings {
         semanticSearch: ($("feat-semantic") as HTMLInputElement).checked,
         sessionTitles: ($("feat-titles") as HTMLInputElement).checked,
         nearDuplicateDetection: ($("feat-dedupe") as HTMLInputElement).checked,
+        sessionSummarisation: ($("feat-summarise") as HTMLInputElement).checked,
       },
       duplicateThreshold:
         Number(($("dup-threshold") as HTMLInputElement).value) / 100,

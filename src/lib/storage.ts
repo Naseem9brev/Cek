@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
       semanticSearch: true,
       sessionTitles: true,
       nearDuplicateDetection: true,
+      sessionSummarisation: false,
     },
     duplicateThreshold: DEFAULT_DUPLICATE_THRESHOLD,
     duplicateAction: "flag",
@@ -39,8 +40,19 @@ function migrate(raw: Partial<Settings>): Settings {
   const base = { ...DEFAULT_SETTINGS, ...raw };
   if (!raw.groq) {
     base.groq = DEFAULT_SETTINGS.groq;
+  } else {
+    base.groq = {
+      ...DEFAULT_SETTINGS.groq,
+      ...raw.groq,
+      features: {
+        ...DEFAULT_SETTINGS.groq.features,
+        ...raw.groq.features,
+        sessionSummarisation:
+          raw.groq.features?.sessionSummarisation ?? false,
+      },
+    };
   }
-  base.schemaVersion = 2;
+  base.schemaVersion = 3;
   return base;
 }
 
