@@ -140,12 +140,30 @@ You stay in control — nothing is injected automatically.
 
 ## Knowledge graph
 
-Open **Graph** from the popup (shows node count, e.g. `Graph (12)`) to explore your memory visually.
+Open **Graph** from the popup (shows node count, e.g. `Graph (12)`) for a full-screen **Obsidian-style** graph workspace — dark canvas, force-directed layout, left insight panel.
 
-- **Nodes** = summarised sessions, labelled by topic, coloured by platform
-- **Edges** = sessions that share entities
-- **Filters** = platform (Claude / ChatGPT) and date range (7d / 30d / all)
-- **Click a node** = full summary, decisions, open questions
+<p align="center">
+  <img src="docs/knowledge-graph-example.jpg" alt="cek knowledge graph showing 14 connected session nodes across Claude and ChatGPT" width="900" />
+</p>
+
+<p align="center"><em>Example: 14 sessions linked by shared entities — orange is Claude, teal is ChatGPT. Click any node to see topic, decisions, and open questions.</em></p>
+
+### Views
+
+| View | What you see |
+|------|----------------|
+| **Sessions** | One node per summarised chat; coloured by platform; linked when sessions share entities |
+| **Concepts** | Entity-level graph — denser, like Obsidian's term map; coloured clusters by co-occurrence |
+
+### Interactions (Obsidian-like)
+
+- **Hover a node** — dims everything except neighbours and their edges
+- **Search** — highlights matching nodes and their connections; dims the rest
+- **Click a node** — detail in the left panel (topic, entities, decisions, open questions)
+- **Top connections** — click to focus and zoom
+- **Fit view** — reset camera to show the full graph
+
+Filters: platform (Claude / ChatGPT) and date range (7d / 30d / all).
 
 Export all nodes as JSON from the popup footer: **Export memory**.
 
