@@ -48,6 +48,19 @@ export interface GroqSettings {
   duplicateAction: "flag" | "skip";
 }
 
+export interface KnowledgeNode {
+  id: string;
+  sessionId: string;
+  topic: string;
+  entities: string[];
+  decisions: string[];
+  openQuestions: string[];
+  platform: Platform;
+  date: number;
+  turnCount: number;
+  searchTokens: string[];
+}
+
 export interface PlatformSettings {
   enabled: boolean;
   tier: string;
@@ -84,6 +97,7 @@ export type BackgroundMessage =
   | { type: "CONTEXT_UPDATED"; payload: ContextUpdatedPayload }
   | { type: "SEMANTIC_SEARCH"; query: string }
   | { type: "GET_STATE" }
+  | { type: "GET_KNOWLEDGE_NODES" }
   | { type: "UPDATE_PROMPT"; id: string; pinned?: boolean; deleted?: boolean }
   | { type: "EXPORT_PINNED" };
 
@@ -91,6 +105,7 @@ export type BackgroundResponse =
   | { ok: true; promptId?: string; skipped?: boolean; duplicateOf?: string }
   | { ok: true; results?: Array<{ id: string; score: number }> }
   | { ok: true; state?: AppState }
+  | { ok: true; nodes?: KnowledgeNode[] }
   | { ok: true; data?: string }
   | { ok: false; error: string };
 
@@ -100,6 +115,7 @@ export interface AppState {
   sessions: Record<string, SessionEntry>;
   messageCounts: Partial<Record<Platform, MessageCountEntry>>;
   contextUsage: ContextUsage | null;
+  knowledgeNodes: KnowledgeNode[];
 }
 
 export function sendBackgroundMessage(

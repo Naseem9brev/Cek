@@ -165,15 +165,23 @@ export function prunePrompts(
 }
 
 export async function loadAppState() {
-  const [settings, prompts, sessions, messageCounts, contextUsage] =
+  const [settings, prompts, sessions, messageCounts, contextUsage, knowledgeNodes] =
     await Promise.all([
       getSettings(),
       getPrompts(),
       getSessions(),
       getMessageCounts(),
       getContextUsage(),
+      import("./knowledge-nodes").then((m) => m.getKnowledgeNodes()),
     ]);
-  return { settings, prompts, sessions, messageCounts, contextUsage };
+  return {
+    settings,
+    prompts,
+    sessions,
+    messageCounts,
+    contextUsage,
+    knowledgeNodes,
+  };
 }
 
 export function generateId(): string {

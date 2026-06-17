@@ -36,6 +36,7 @@ import {
 } from "../lib/windows";
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import type { Platform } from "../lib/constants";
+import { getKnowledgeNodes } from "../lib/knowledge-nodes";
 
 const lastExactPrompt = new Map<string, { text: string; at: number }>();
 
@@ -313,6 +314,9 @@ chrome.runtime.onMessage.addListener(
             break;
           case "GET_STATE":
             sendResponse({ ok: true, state: await loadAppState() });
+            break;
+          case "GET_KNOWLEDGE_NODES":
+            sendResponse({ ok: true, nodes: await getKnowledgeNodes() });
             break;
           case "UPDATE_PROMPT":
             sendResponse(
