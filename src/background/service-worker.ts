@@ -3,7 +3,9 @@ import {
   getContextMax,
 } from "../lib/constants";
 import { checkNearDuplicate } from "../lib/duplicates";
+import { scorePromptHybrid } from "../lib/context-match";
 import { embedText, generateSessionTitle, withRetry } from "../lib/groq";
+import { getNodeEmbeddings } from "../lib/node-embeddings";
 import type {
   BackgroundMessage,
   BackgroundResponse,
