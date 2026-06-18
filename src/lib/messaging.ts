@@ -68,6 +68,8 @@ export interface KnowledgeNode {
   date: number;
   turnCount: number;
   searchTokens: string[];
+  /** Project/workspace tag for scoped context injection */
+  workspace?: string;
 }
 
 export interface TurnCapturedPayload {
@@ -105,6 +107,8 @@ export interface Settings {
     gemini: PlatformSettings;
   };
   groq: GroqSettings;
+  workspaces: string[];
+  activeWorkspace: string | null;
   showOnPageBadge?: boolean;
   debugMode?: boolean;
   setupComplete?: boolean;

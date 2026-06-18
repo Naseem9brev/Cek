@@ -32,6 +32,8 @@ export const DEFAULT_SETTINGS: Settings = {
     duplicateThreshold: DEFAULT_DUPLICATE_THRESHOLD,
     duplicateAction: "flag",
   },
+  workspaces: ["General"],
+  activeWorkspace: "General",
   showOnPageBadge: false,
   debugMode: false,
   setupComplete: false,
@@ -53,7 +55,12 @@ function migrate(raw: Partial<Settings>): Settings {
       },
     };
   }
-  base.schemaVersion = 3;
+  base.workspaces = raw.workspaces?.length ? raw.workspaces : DEFAULT_SETTINGS.workspaces;
+  base.activeWorkspace =
+    raw.activeWorkspace !== undefined
+      ? raw.activeWorkspace
+      : DEFAULT_SETTINGS.activeWorkspace;
+  base.schemaVersion = 4;
   return base;
 }
 
