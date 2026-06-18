@@ -35,6 +35,25 @@ async function afterNodeCreated(
       .catch((e) => appendDebugLog(`Node embed failed: ${e}`));
   }
 
+  if (settings.obsidian.autoSync && settings.obsidian.vaultConnected) {
+    void (async () => {
+      try {
+        if (!(await isVaultConnected())) return;
+        const { written, errors } = await syncNodesToVault(
+          [node],
+          settings.obsidian.subfolder
+        );
+        if (errors.length) {
+          await appendDebugLog(`Obsidian sync errors: ${errors.join("; ")}`);
+        } else {
+          await appendDebugLog(`Obsidian synced ${written} note(s)`);
+        }
+      } catch (e) {
+        await appendDebugLog(`Obsidian sync failed: ${e}`);
+      }
+    })();
+  }
+
 }
 
 export async function resetIdleAlarm(tabId: number): Promise<void> {
