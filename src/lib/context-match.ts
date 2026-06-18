@@ -42,29 +42,48 @@ function fuzzyIncludes(haystack: string, needle: string): boolean {
   return false;
 }
 
+export function filterNodesByWorkspace(
+  nodes: KnowledgeNode[],
+  workspaceFilter?: string | null
+): KnowledgeNode[] {
+  if (workspaceFilter == null) return nodes;
+  return nodes.filter(
+    (node) =>
+      node.workspace === workspaceFilter || node.workspace === undefined
+  );
+}
+
+function scoreNodeKeyword(prompt: string, node: KnowledgeNode): number {
+  const promptTokens = tokenize(prompt);
+  if (promptTokens.length === 0) return 0;
+
+  let score = 0;
+  const topicLower = node.topic.toLowerCase();
+  const entityLower = node.entities.map((e) => e.toLowerCase());
+  const searchSet = new Set(node.searchTokens);
+
+  for (const token of promptTokens) {
+    if (searchSet.has(token)) score += 2;
+    if (entityLower.some((e) => fuzzyIncludes(e, token) || fuzzyIncludes(token, e))) {
+      score += 2;
+    }
+    if (fuzzyIncludes(topicLower, token)) score += 3;
+  }
+
+  return score;
+}
+
 export function scorePromptAgainstNodes(
   prompt: string,
-  nodes: KnowledgeNode[]
+  nodes: KnowledgeNode[],
+  workspaceFilter?: string | null
 ): MatchResult | null {
-  const promptTokens = tokenize(prompt);
-  if (promptTokens.length === 0) return null;
+  if (tokenize(prompt).length === 0) return null;
 
   let best: MatchResult | null = null;
 
-  for (const node of nodes) {
-    let score = 0;
-    const topicLower = node.topic.toLowerCase();
-    const entityLower = node.entities.map((e) => e.toLowerCase());
-    const searchSet = new Set(node.searchTokens);
-
-    for (const token of promptTokens) {
-      if (searchSet.has(token)) score += 2;
-      if (entityLower.some((e) => fuzzyIncludes(e, token) || fuzzyIncludes(token, e))) {
-        score += 2;
-      }
-      if (fuzzyIncludes(topicLower, token)) score += 3;
-    }
-
+  for (const node of filterNodesByWorkspace(nodes, workspaceFilter)) {
+    const score = scoreNodeKeyword(prompt, node);
     if (score >= CONTEXT_MATCH_THRESHOLD && (!best || score > best.score)) {
       best = { node, score };
     }
@@ -72,6 +91,7 @@ export function scorePromptAgainstNodes(
 
   return best;
 }
+
 
 export function formatContextInjection(node: KnowledgeNode): string {
   const date = new Date(node.date).toLocaleDateString(undefined, {
