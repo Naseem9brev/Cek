@@ -94,6 +94,12 @@ export interface PendingContextMatch {
   dismissed?: boolean;
 }
 
+export interface ObsidianSettings {
+  vaultConnected: boolean;
+  subfolder: string;
+  autoSync: boolean;
+}
+
 export interface PlatformSettings {
   enabled: boolean;
   tier: string;
@@ -109,6 +115,7 @@ export interface Settings {
   groq: GroqSettings;
   workspaces: string[];
   activeWorkspace: string | null;
+  obsidian: ObsidianSettings;
   showOnPageBadge?: boolean;
   debugMode?: boolean;
   setupComplete?: boolean;
@@ -140,8 +147,7 @@ export type BackgroundMessage =
   | { type: "GET_KNOWLEDGE_NODES" }
   | { type: "UPDATE_PROMPT"; id: string; pinned?: boolean; deleted?: boolean }
   | { type: "EXPORT_PINNED" }
-  | { type: "EXPORT_KNOWLEDGE_NODES" }
-  | { type: "SCORE_CONTEXT_MATCH"; prompt: string; workspace?: string | null };
+  | { type: "EXPORT_KNOWLEDGE_NODES" };
 
 export type BackgroundResponse =
   | { ok: true; promptId?: string; skipped?: boolean; duplicateOf?: string }
@@ -150,7 +156,6 @@ export type BackgroundResponse =
   | { ok: true; nodes?: KnowledgeNode[] }
   | { ok: true; pendingMatch?: PendingContextMatch | null }
   | { ok: true; data?: string }
-  | { ok: true; match?: { node: KnowledgeNode; score: number } | null }
   | { ok: false; error: string };
 
 export interface AppState {

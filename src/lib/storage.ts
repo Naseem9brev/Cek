@@ -34,6 +34,11 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   workspaces: ["General"],
   activeWorkspace: "General",
+  obsidian: {
+    vaultConnected: false,
+    subfolder: "cek",
+    autoSync: false,
+  },
   showOnPageBadge: false,
   debugMode: false,
   setupComplete: false,
@@ -60,6 +65,7 @@ function migrate(raw: Partial<Settings>): Settings {
     raw.activeWorkspace !== undefined
       ? raw.activeWorkspace
       : DEFAULT_SETTINGS.activeWorkspace;
+  base.obsidian = { ...DEFAULT_SETTINGS.obsidian, ...raw.obsidian };
   base.schemaVersion = 4;
   return base;
 }
