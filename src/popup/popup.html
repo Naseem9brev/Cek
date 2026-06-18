@@ -18,7 +18,10 @@
       </header>
 
       <div id="context-match-banner" class="context-match-banner hidden">
-        <p id="context-match-text"></p>
+        <div class="context-match-header">
+          <p id="context-match-text"></p>
+          <span id="context-match-workspace" class="workspace-badge hidden"></span>
+        </div>
         <div class="context-match-actions">
           <button id="context-inject-btn" class="pill-btn primary" type="button">Inject context</button>
           <button id="context-dismiss-btn" class="pill-btn" type="button">Dismiss</button>
@@ -31,6 +34,11 @@
       </div>
 
       <div id="platform-strip" class="platform-strip"></div>
+
+      <div class="workspace-row">
+        <label for="workspace-select" class="workspace-label">Workspace</label>
+        <select id="workspace-select" class="workspace-select" aria-label="Workspace filter"></select>
+      </div>
 
       <section id="context-section" class="context-section hidden">
         <div class="context-meta">
@@ -68,6 +76,8 @@
       <footer class="footer">
         <button id="export-btn" class="link-btn" type="button">Export pinned</button>
         <button id="export-nodes-btn" class="link-btn" type="button">Export memory</button>
+        <button id="export-obsidian-btn" class="link-btn" type="button">Export Obsidian</button>
+        <button id="export-mcp-btn" class="link-btn" type="button">Export MCP</button>
       </footer>
     </div>
     <script type="module" src="./popup.ts"></script>

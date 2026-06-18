@@ -11,7 +11,8 @@ import {
   formatTokenCount,
   formatTokenReadout,
 } from "../lib/tokens";
-import { fallbackSessionTitle } from "../lib/storage";
+import { fallbackSessionTitle, getSettings, saveSettings } from "../lib/storage";
+import { downloadMcpExport } from "../lib/mcp-export";
 import { remainingMessages } from "../lib/windows";
 
 let state: AppState | null = null;
@@ -40,6 +41,7 @@ function render(): void {
   renderContextMatchBanner();
   renderGraphButton();
   renderPlatformStrip();
+  renderWorkspaceSelector();
   renderContext();
   renderSemanticButton();
   renderPinned();
@@ -59,6 +61,16 @@ function renderContextMatchBanner(): void {
     weekday: "short",
   });
   $("context-match-text").textContent = `You explored "${match.node.topic}" with ${platform} on ${date} — inject context?`;
+
+  const badge = $("context-match-workspace");
+  const ws = match.node.workspace;
+  if (ws) {
+    badge.textContent = ws;
+    badge.classList.remove("hidden");
+  } else {
+    badge.textContent = "";
+    badge.classList.add("hidden");
+  }
 }
 
 function renderGraphButton(): void {
@@ -99,6 +111,35 @@ function renderGroqIndicator(): void {
   const on =
     state!.settings.groq.enabled && !!state!.settings.groq.apiKey;
   el.classList.toggle("hidden", !on);
+}
+
+function renderWorkspaceSelector(): void {
+  const select = $("workspace-select") as HTMLSelectElement;
+  const workspaces = state!.settings.workspaces;
+  const active = state!.settings.activeWorkspace;
+
+  select.innerHTML = "";
+
+  const allOpt = document.createElement("option");
+  allOpt.value = "";
+  allOpt.textContent = "All workspaces";
+  select.appendChild(allOpt);
+
+  for (const name of workspaces) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+
+  select.value = active ?? "";
+}
+
+async function setActiveWorkspace(workspace: string | null): Promise<void> {
+  const settings = await getSettings();
+  settings.activeWorkspace = workspace;
+  await saveSettings(settings);
+  if (state) state.settings.activeWorkspace = workspace;
 }
 
 function renderPlatformStrip(): void {
@@ -371,12 +412,23 @@ async function runSemanticSearch(): Promise<void> {
   render();
 }
 
-$("settings-btn").addEventListener("click", () => {
-  chrome.runtime.openOptionsPage();
+$("graph-btn").addEventListener("click", () => {
+  const workspace = state?.settings.activeWorkspace;
+  const params = workspace
+    ? `?workspace=${encodeURIComponent(workspace)}`
+    : "";
+  chrome.tabs.create({
+    url: chrome.runtime.getURL(`src/graph/graph.html${params}`),
+  });
 });
 
-$("graph-btn").addEventListener("click", () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL("src/graph/graph.html") });
+$("workspace-select").addEventListener("change", (e) => {
+  const val = (e.target as HTMLSelectElement).value;
+  void setActiveWorkspace(val ? val : null);
+});
+
+$("settings-btn").addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
 });
 
 $("context-inject-btn").addEventListener("click", () => {
@@ -434,6 +486,25 @@ $("export-nodes-btn").addEventListener("click", async () => {
     a.download = `cek-memory-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+});
+
+$("export-obsidian-btn").addEventListener("click", async () => {
+  const res = await sendBackgroundMessage({ type: "EXPORT_OBSIDIAN_ZIP" });
+  if (!res.ok || !("data" in res) || !res.data) return;
+  const blob = new Blob([res.data], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cek-obsidian-${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$("export-mcp-btn").addEventListener("click", async () => {
+  const res = await sendBackgroundMessage({ type: "SYNC_MCP_EXPORT" });
+  if (res.ok && "data" in res && res.data) {
+    downloadMcpExport(res.data);
   }
 });
 
