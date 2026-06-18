@@ -39,6 +39,9 @@ export const DEFAULT_SETTINGS: Settings = {
     subfolder: "cek",
     autoSync: false,
   },
+  export: {
+    mcpSyncEnabled: false,
+  },
   showOnPageBadge: false,
   debugMode: false,
   setupComplete: false,
@@ -66,6 +69,7 @@ function migrate(raw: Partial<Settings>): Settings {
       ? raw.activeWorkspace
       : DEFAULT_SETTINGS.activeWorkspace;
   base.obsidian = { ...DEFAULT_SETTINGS.obsidian, ...raw.obsidian };
+  base.export = { ...DEFAULT_SETTINGS.export, ...raw.export };
   base.schemaVersion = 4;
   return base;
 }
