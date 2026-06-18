@@ -66,6 +66,7 @@ export const STORAGE_KEYS = {
   settings: "settings",
   prompts: "prompts",
   promptEmbeddings: "promptEmbeddings",
+  nodeEmbeddings: "nodeEmbeddings",
   sessions: "sessions",
   messageCounts: "messageCounts",
   contextUsage: "contextUsage",
@@ -81,6 +82,8 @@ export const STREAM_SETTLE_MS = 1500;
 export const STREAM_HARD_TIMEOUT_MS = 120_000;
 export const SUMMARISE_TRANSCRIPT_MAX_CHARS = 6000;
 export const CONTEXT_MATCH_THRESHOLD = 3;
+/** Min cosine similarity (0–1) when semantic node matching is enabled */
+export const SEMANTIC_MATCH_THRESHOLD = 0.72;
 export const DUPLICATE_LOOKBACK = 30;
 export const DEFAULT_DUPLICATE_THRESHOLD = 0.92;
 export const EXACT_DEDUPE_MS = 2000;
