@@ -68,6 +68,7 @@ export interface KnowledgeNode {
   date: number;
   turnCount: number;
   searchTokens: string[];
+  /** Project/workspace tag for scoped context injection */
   workspace?: string;
 }
 
@@ -93,19 +94,22 @@ export interface PendingContextMatch {
   dismissed?: boolean;
 }
 
+export interface PlatformSettings {
+  enabled: boolean;
+  tier: string;
+}
+
 export interface ObsidianSettings {
+  /** User picked a vault folder via File System Access API */
   vaultConnected: boolean;
+  /** Subfolder inside vault for cek notes, e.g. "cek" */
   subfolder: string;
   autoSync: boolean;
 }
 
 export interface ExportSettings {
+  /** Write memory JSON for MCP server consumption */
   mcpSyncEnabled: boolean;
-}
-
-export interface PlatformSettings {
-  enabled: boolean;
-  tier: string;
 }
 
 export interface Settings {
@@ -116,7 +120,9 @@ export interface Settings {
     gemini: PlatformSettings;
   };
   groq: GroqSettings;
+  /** Named project profiles; nodes tagged with active workspace on summarise */
   workspaces: string[];
+  /** null = inject from all workspaces */
   activeWorkspace: string | null;
   obsidian: ObsidianSettings;
   export: ExportSettings;
@@ -151,7 +157,11 @@ export type BackgroundMessage =
   | { type: "GET_KNOWLEDGE_NODES" }
   | { type: "UPDATE_PROMPT"; id: string; pinned?: boolean; deleted?: boolean }
   | { type: "EXPORT_PINNED" }
-  | { type: "EXPORT_KNOWLEDGE_NODES" };
+  | { type: "EXPORT_KNOWLEDGE_NODES" }
+  | { type: "EXPORT_OBSIDIAN_ZIP" }
+  | { type: "SYNC_OBSIDIAN_VAULT" }
+  | { type: "SYNC_MCP_EXPORT" }
+  | { type: "SCORE_CONTEXT_MATCH"; prompt: string; workspace?: string | null };
 
 export type BackgroundResponse =
   | { ok: true; promptId?: string; skipped?: boolean; duplicateOf?: string }
@@ -160,6 +170,7 @@ export type BackgroundResponse =
   | { ok: true; nodes?: KnowledgeNode[] }
   | { ok: true; pendingMatch?: PendingContextMatch | null }
   | { ok: true; data?: string }
+  | { ok: true; match?: { node: KnowledgeNode; score: number } | null }
   | { ok: false; error: string };
 
 export interface AppState {

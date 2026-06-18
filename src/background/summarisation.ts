@@ -54,6 +54,16 @@ async function afterNodeCreated(
     })();
   }
 
+  if (settings.export.mcpSyncEnabled) {
+    void Promise.all([getKnowledgeNodes(), getNodeEmbeddings()])
+      .then(([nodes, nodeEmbeddings]) => {
+        const data = serializeMcpExport(
+          buildMcpExportPayload(nodes, nodeEmbeddings)
+        );
+        return downloadMcpExportInBackground(data);
+      })
+      .catch((e) => appendDebugLog(`MCP export failed: ${e}`));
+  }
 }
 
 export async function resetIdleAlarm(tabId: number): Promise<void> {
