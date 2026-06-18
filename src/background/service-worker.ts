@@ -3,9 +3,9 @@ import {
   getContextMax,
 } from "../lib/constants";
 import { checkNearDuplicate } from "../lib/duplicates";
-import { scorePromptHybrid } from "../lib/context-match";
+import { buildObsidianBundle } from "../lib/obsidian-export";
+import { syncNodesToVault } from "../lib/vault-sync";
 import { embedText, generateSessionTitle, withRetry } from "../lib/groq";
-import { getNodeEmbeddings } from "../lib/node-embeddings";
 import type {
   BackgroundMessage,
   BackgroundResponse,
@@ -320,6 +320,30 @@ async function handleExportKnowledgeNodes(): Promise<BackgroundResponse> {
   return { ok: true, data: JSON.stringify(nodes, null, 2) };
 }
 
+async function handleExportObsidianZip(): Promise<BackgroundResponse> {
+  const nodes = await getKnowledgeNodes();
+  if (nodes.length === 0) {
+    return { ok: false, error: "No knowledge nodes to export" };
+  }
+  return { ok: true, data: buildObsidianBundle(nodes) };
+}
+
+async function handleSyncObsidianVault(): Promise<BackgroundResponse> {
+  const settings = await getSettings();
+  if (!settings.obsidian.vaultConnected) {
+    return { ok: false, error: "Vault not connected" };
+  }
+  const nodes = await getKnowledgeNodes();
+  const { written, errors } = await syncNodesToVault(
+    nodes,
+    settings.obsidian.subfolder
+  );
+  if (errors.length > 0) {
+    return { ok: false, error: errors.join("; ") };
+  }
+  return { ok: true, data: JSON.stringify({ written }) };
+}
+
 async function resolveTargetTabId(
   senderTabId: number,
   messageTabId?: number
@@ -398,6 +422,12 @@ chrome.runtime.onMessage.addListener(
             break;
           case "EXPORT_KNOWLEDGE_NODES":
             sendResponse(await handleExportKnowledgeNodes());
+            break;
+          case "EXPORT_OBSIDIAN_ZIP":
+            sendResponse(await handleExportObsidianZip());
+            break;
+          case "SYNC_OBSIDIAN_VAULT":
+            sendResponse(await handleSyncObsidianVault());
             break;
           default:
             sendResponse({ ok: false, error: "Unknown message" });
