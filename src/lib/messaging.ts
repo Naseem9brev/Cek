@@ -99,6 +99,10 @@ export interface ObsidianSettings {
   autoSync: boolean;
 }
 
+export interface ExportSettings {
+  mcpSyncEnabled: boolean;
+}
+
 export interface PlatformSettings {
   enabled: boolean;
   tier: string;
@@ -115,6 +119,7 @@ export interface Settings {
   workspaces: string[];
   activeWorkspace: string | null;
   obsidian: ObsidianSettings;
+  export: ExportSettings;
   showOnPageBadge?: boolean;
   debugMode?: boolean;
   setupComplete?: boolean;
@@ -146,10 +151,7 @@ export type BackgroundMessage =
   | { type: "GET_KNOWLEDGE_NODES" }
   | { type: "UPDATE_PROMPT"; id: string; pinned?: boolean; deleted?: boolean }
   | { type: "EXPORT_PINNED" }
-  | { type: "EXPORT_KNOWLEDGE_NODES" }
-  | { type: "EXPORT_OBSIDIAN_ZIP" }
-  | { type: "SYNC_OBSIDIAN_VAULT" }
-  | { type: "SCORE_CONTEXT_MATCH"; prompt: string; workspace?: string | null };
+  | { type: "EXPORT_KNOWLEDGE_NODES" };
 
 export type BackgroundResponse =
   | { ok: true; promptId?: string; skipped?: boolean; duplicateOf?: string }
@@ -158,7 +160,6 @@ export type BackgroundResponse =
   | { ok: true; nodes?: KnowledgeNode[] }
   | { ok: true; pendingMatch?: PendingContextMatch | null }
   | { ok: true; data?: string }
-  | { ok: true; match?: { node: KnowledgeNode; score: number } | null }
   | { ok: false; error: string };
 
 export interface AppState {
