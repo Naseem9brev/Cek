@@ -1,4 +1,8 @@
-import { CONTEXT_MATCH_THRESHOLD } from "./constants";
+import {
+  CONTEXT_MATCH_THRESHOLD,
+  SEMANTIC_MATCH_THRESHOLD,
+} from "./constants";
+import { cosineSimilarity, topKBySimilarity } from "./embeddings";
 import type { KnowledgeNode } from "./messaging";
 
 const STOPWORDS = new Set([
@@ -92,6 +96,70 @@ export function scorePromptAgainstNodes(
   return best;
 }
 
+export function scorePromptAgainstNodesSemantic(
+  prompt: string,
+  nodes: KnowledgeNode[],
+  queryEmbedding: number[],
+  nodeEmbeddings: Record<string, number[]>,
+  workspaceFilter?: string | null
+): MatchResult | null {
+  void prompt;
+  const filtered = filterNodesByWorkspace(nodes, workspaceFilter);
+  const nodeById = new Map(filtered.map((node) => [node.id, node]));
+  const entries = filtered
+    .filter((node) => nodeEmbeddings[node.id]?.length)
+    .map((node) => ({ id: node.id, vector: nodeEmbeddings[node.id] }));
+
+  if (entries.length === 0) return null;
+
+  const ranked = topKBySimilarity(queryEmbedding, entries, entries.length);
+  for (const { id, score } of ranked) {
+    if (score < SEMANTIC_MATCH_THRESHOLD) break;
+    const node = nodeById.get(id);
+    if (node) return { node, score };
+  }
+
+  return null;
+}
+
+export function scorePromptHybrid(
+  prompt: string,
+  nodes: KnowledgeNode[],
+  options?: {
+    queryEmbedding?: number[];
+    nodeEmbeddings?: Record<string, number[]>;
+    workspaceFilter?: string | null;
+  }
+): MatchResult | null {
+  const filtered = filterNodesByWorkspace(nodes, options?.workspaceFilter);
+  let best: MatchResult | null = null;
+
+  for (const node of filtered) {
+    const keywordScore = scoreNodeKeyword(prompt, node);
+    let semanticScore = 0;
+    if (
+      options?.queryEmbedding?.length &&
+      options.nodeEmbeddings?.[node.id]?.length
+    ) {
+      semanticScore = cosineSimilarity(
+        options.queryEmbedding,
+        options.nodeEmbeddings[node.id]
+      );
+    }
+
+    const matches =
+      semanticScore >= SEMANTIC_MATCH_THRESHOLD ||
+      keywordScore >= CONTEXT_MATCH_THRESHOLD;
+    if (!matches) continue;
+
+    const combinedScore = keywordScore + semanticScore * 10;
+    if (!best || combinedScore > best.score) {
+      best = { node, score: combinedScore };
+    }
+  }
+
+  return best;
+}
 
 export function formatContextInjection(node: KnowledgeNode): string {
   const date = new Date(node.date).toLocaleDateString(undefined, {
