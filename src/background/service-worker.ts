@@ -3,9 +3,11 @@ import {
   getContextMax,
 } from "../lib/constants";
 import { checkNearDuplicate } from "../lib/duplicates";
+import { scorePromptHybrid } from "../lib/context-match";
 import { buildObsidianBundle } from "../lib/obsidian-export";
 import { syncNodesToVault } from "../lib/vault-sync";
 import { embedText, generateSessionTitle, withRetry } from "../lib/groq";
+import { getNodeEmbeddings } from "../lib/node-embeddings";
 import type {
   BackgroundMessage,
   BackgroundResponse,
@@ -39,6 +41,10 @@ import {
 import type { ContextUpdatedPayload } from "../lib/messaging";
 import type { Platform } from "../lib/constants";
 import { getKnowledgeNodes } from "../lib/knowledge-nodes";
+import {
+  buildMcpExportPayload,
+  serializeMcpExport,
+} from "../lib/mcp-export";
 import {
   handleContextMatchFound,
   handleDismissContextMatch,
@@ -344,6 +350,49 @@ async function handleSyncObsidianVault(): Promise<BackgroundResponse> {
   return { ok: true, data: JSON.stringify({ written }) };
 }
 
+async function handleScoreContextMatch(
+  prompt: string,
+  workspace?: string | null
+): Promise<BackgroundResponse> {
+  const settings = await getSettings();
+  const [nodes, nodeEmbeddings] = await Promise.all([
+    getKnowledgeNodes(),
+    getNodeEmbeddings(),
+  ]);
+
+  let queryEmbedding: number[] | undefined;
+  if (settings.groq.enabled && settings.groq.apiKey) {
+    try {
+      queryEmbedding = await withRetry(() =>
+        embedText(settings.groq.apiKey, prompt)
+      );
+    } catch (e) {
+      await appendDebugLog(`Context match embed failed: ${e}`);
+    }
+  }
+
+  const workspaceFilter =
+    workspace !== undefined ? workspace : settings.activeWorkspace;
+
+  const match = scorePromptHybrid(prompt, nodes, {
+    queryEmbedding,
+    nodeEmbeddings,
+    workspaceFilter,
+  });
+
+  if (!match) return { ok: true };
+  return { ok: true, match };
+}
+
+async function handleSyncMcpExport(): Promise<BackgroundResponse> {
+  const [nodes, nodeEmbeddings] = await Promise.all([
+    getKnowledgeNodes(),
+    getNodeEmbeddings(),
+  ]);
+  const payload = buildMcpExportPayload(nodes, nodeEmbeddings);
+  return { ok: true, data: serializeMcpExport(payload) };
+}
+
 async function resolveTargetTabId(
   senderTabId: number,
   messageTabId?: number
@@ -428,6 +477,14 @@ chrome.runtime.onMessage.addListener(
             break;
           case "SYNC_OBSIDIAN_VAULT":
             sendResponse(await handleSyncObsidianVault());
+            break;
+          case "SCORE_CONTEXT_MATCH":
+            sendResponse(
+              await handleScoreContextMatch(message.prompt, message.workspace)
+            );
+            break;
+          case "SYNC_MCP_EXPORT":
+            sendResponse(await handleSyncMcpExport());
             break;
           default:
             sendResponse({ ok: false, error: "Unknown message" });
