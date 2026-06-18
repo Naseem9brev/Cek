@@ -91,6 +91,67 @@
       </section>
 
       <section class="card">
+        <h2>Workspaces</h2>
+        <p class="hint">Project profiles tag memory nodes when sessions are summarised. Filter context injection by workspace in the popup.</p>
+        <label class="field">
+          Default workspace
+          <select id="default-workspace"></select>
+        </label>
+        <div class="workspace-add">
+          <input type="text" id="workspace-input" placeholder="New workspace name" autocomplete="off" />
+          <button type="button" id="workspace-add-btn" class="workspace-btn">Add</button>
+        </div>
+        <ul id="workspace-list" class="workspace-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Obsidian export</h2>
+        <p class="hint">
+          Connect an Obsidian vault folder to auto-sync memory notes as markdown
+          with YAML frontmatter and wikilinks.
+        </p>
+        <label class="field">
+          Subfolder in vault
+          <input type="text" id="obsidian-subfolder" placeholder="cek" autocomplete="off" />
+        </label>
+        <label class="row">
+          <input type="checkbox" id="obsidian-auto-sync" />
+          Auto-sync when a new memory node is created
+        </label>
+        <div class="row">
+          <button type="button" id="obsidian-connect-btn" class="btn-secondary">
+            Connect vault folder
+          </button>
+          <button type="button" id="obsidian-sync-btn" class="btn-secondary">
+            Sync now
+          </button>
+        </div>
+        <p class="hint" id="obsidian-status">Vault not connected</p>
+      </section>
+
+      <section class="card">
+        <h2>Cursor / MCP</h2>
+        <p class="hint">
+          Export memory for the Cek MCP server. Copy
+          <code>memory-export.json</code> to
+          <code>~/.cek/memory-export.json</code> (or set
+          <code>CEK_MEMORY_PATH</code> in Cursor).
+        </p>
+        <label class="row">
+          <input type="checkbox" id="mcp-sync-enabled" />
+          Auto-download export when a new memory node is created
+        </label>
+        <div class="row">
+          <button type="button" id="mcp-export-btn" class="btn-secondary">
+            Export memory for MCP now
+          </button>
+        </div>
+        <p class="hint" id="mcp-path-hint">
+          Default MCP path: ~/.cek/memory-export.json
+        </p>
+      </section>
+
+      <section class="card">
         <h2>Advanced</h2>
         <label class="row">
           <input type="checkbox" id="debug-mode" />
