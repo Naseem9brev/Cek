@@ -90,6 +90,9 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
       platform: entry.platform,
       date: Date.now(),
       turnCount: turns.length,
+      ...(settings.activeWorkspace != null
+        ? { workspace: settings.activeWorkspace }
+        : {}),
     });
 
     await appendDebugLog(
