@@ -1,8 +1,7 @@
-import { CONTEXT_MATCH_THRESHOLD } from "../lib/constants";
 import type { Platform } from "../lib/constants";
 import type { KnowledgeNode } from "../lib/messaging";
 import { sendBackgroundMessage } from "../lib/messaging";
-import { scorePromptAgainstNodes, formatContextInjection } from "../lib/context-match";
+import { formatContextInjection } from "../lib/context-match";
 import {
   queryAll,
   queryFirst,
@@ -35,12 +34,13 @@ export async function checkContextMatch(
   if (!isFreshChat(messageSelectors)) return;
   if (await hasCheckedContextMatch()) return;
 
-  const res = await sendBackgroundMessage({ type: "GET_KNOWLEDGE_NODES" });
-  if (!res.ok || !("nodes" in res) || !res.nodes?.length) return;
+  const res = await sendBackgroundMessage({
+    type: "SCORE_CONTEXT_MATCH",
+    prompt,
+  });
+  if (!res.ok || !("match" in res) || !res.match) return;
 
-  const match = scorePromptAgainstNodes(prompt, res.nodes);
-  if (!match || match.score < CONTEXT_MATCH_THRESHOLD) return;
-
+  const match = res.match;
   await markContextMatchChecked();
 
   await sendBackgroundMessage({
