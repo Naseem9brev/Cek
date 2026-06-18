@@ -2,6 +2,8 @@ import type { Platform } from "../lib/constants";
 import { PLATFORM_LABELS } from "../lib/constants";
 import type { KnowledgeNode } from "../lib/messaging";
 import { sendBackgroundMessage } from "../lib/messaging";
+import { filterNodesByWorkspace } from "../lib/context-match";
+import { getSettings } from "../lib/storage";
 
 declare const vis: {
   Network: new (
@@ -98,6 +100,7 @@ const NORMAL_OPACITY = 1;
 
 let allNodes: KnowledgeNode[] = [];
 let filterPlatform: Platform | "all" = "all";
+let filterWorkspace: string | null = null;
 let filterDays: number | "all" = "all";
 let graphView: GraphView = "sessions";
 let searchQuery = "";
@@ -111,6 +114,7 @@ const $ = <T extends HTMLElement>(id: string) =>
 
 function filteredKnowledgeNodes(): KnowledgeNode[] {
   let list = [...allNodes];
+  list = filterNodesByWorkspace(list, filterWorkspace);
   if (filterPlatform !== "all") {
     list = list.filter((n) => n.platform === filterPlatform);
   }
@@ -513,7 +517,7 @@ function showSelection(nodeId: string): void {
     const raw = node._raw as KnowledgeNode;
     detail.innerHTML = `
       <h3>${escapeHtml(raw.topic)}</h3>
-      <p class="meta">${PLATFORM_LABELS[raw.platform]} · ${formatDate(raw.date)} · ${raw.turnCount} turns</p>
+      <p class="meta">${PLATFORM_LABELS[raw.platform]} · ${formatDate(raw.date)} · ${raw.turnCount} turns${raw.workspace ? ` · ${escapeHtml(raw.workspace)}` : ""}</p>
       ${listBlock("Entities", raw.entities)}
       ${listBlock("Decisions", raw.decisions)}
       ${listBlock("Open questions", raw.openQuestions)}
@@ -642,6 +646,26 @@ function updateFooter(nodeCount: number, edgeCount: number): void {
   $("footer-status").textContent = `${view} · ${nodeCount} nodes · ${edgeCount} edges`;
 }
 
+function renderWorkspaceFilter(workspaces: string[]): void {
+  const select = $("workspace-filter") as HTMLSelectElement;
+  const current = filterWorkspace ?? "all";
+  select.innerHTML = "";
+
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "All workspaces";
+  select.appendChild(allOpt);
+
+  for (const name of workspaces) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+
+  select.value = current === null ? "all" : current;
+}
+
 function renderFilters(): void {
   const container = $("platform-filters");
   container.innerHTML = "";
@@ -673,10 +697,21 @@ function setGraphView(view: GraphView): void {
 }
 
 async function loadNodes(): Promise<void> {
+  const settings = await getSettings();
+  const params = new URLSearchParams(location.search);
+  const urlWorkspace = params.get("workspace");
+  if (urlWorkspace) {
+    filterWorkspace = urlWorkspace;
+  } else {
+    filterWorkspace = settings.activeWorkspace;
+  }
+
   const res = await sendBackgroundMessage({ type: "GET_KNOWLEDGE_NODES" });
   if (res.ok && "nodes" in res && res.nodes) {
     allNodes = res.nodes;
   }
+
+  renderWorkspaceFilter(settings.workspaces);
   renderFilters();
   renderGraph();
 }
@@ -691,6 +726,12 @@ $("view-entities").addEventListener("click", () => setGraphView("entities"));
 $("date-filter").addEventListener("change", (e) => {
   const val = (e.target as HTMLSelectElement).value;
   filterDays = val === "all" ? "all" : Number(val);
+  renderGraph();
+});
+
+$("workspace-filter").addEventListener("change", (e) => {
+  const val = (e.target as HTMLSelectElement).value;
+  filterWorkspace = val === "all" ? null : val;
   renderGraph();
 });
 
