@@ -1,8 +1,14 @@
 import { SESSION_IDLE_MS } from "../lib/constants";
 import type { Platform } from "../lib/constants";
 import { summariseSession, withRetry } from "../lib/groq";
-import type { TurnCapturedPayload } from "../lib/messaging";
-import { addKnowledgeNode } from "../lib/knowledge-nodes";
+import type { KnowledgeNode, TurnCapturedPayload } from "../lib/messaging";
+import { addKnowledgeNode, getKnowledgeNodes } from "../lib/knowledge-nodes";
+import {
+  buildMcpExportPayload,
+  downloadMcpExportInBackground,
+  serializeMcpExport,
+} from "../lib/mcp-export";
+import { embedKnowledgeNode, getNodeEmbeddings, setNodeEmbedding } from "../lib/node-embeddings";
 import {
   appendTurn,
   clearAllBuffersForTab,
@@ -13,9 +19,22 @@ import {
   type SessionBufferEntry,
 } from "../lib/session-buffer";
 import { appendDebugLog, generateId, getSettings } from "../lib/storage";
+import { isVaultConnected, syncNodesToVault } from "../lib/vault-sync";
 
 function idleAlarmName(tabId: number): string {
   return `idle-${tabId}`;
+}
+
+async function afterNodeCreated(
+  node: KnowledgeNode,
+  settings: Awaited<ReturnType<typeof getSettings>>
+): Promise<void> {
+  if (settings.groq.enabled && settings.groq.apiKey) {
+    void withRetry(() => embedKnowledgeNode(settings.groq.apiKey, node))
+      .then((vector) => setNodeEmbedding(node.id, vector))
+      .catch((e) => appendDebugLog(`Node embed failed: ${e}`));
+  }
+
 }
 
 export async function resetIdleAlarm(tabId: number): Promise<void> {
@@ -80,7 +99,7 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
       summariseSession(settings.groq.apiKey, turns, entry.platform)
     );
 
-    await addKnowledgeNode({
+    const node = await addKnowledgeNode({
       id: generateId(),
       sessionId: entry.sessionId,
       topic: result.topic,
@@ -98,6 +117,8 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
     await appendDebugLog(
       `Summarised session ${entry.sessionId}: ${result.topic}`
     );
+
+    void afterNodeCreated(node, settings);
   } catch (e) {
     await appendDebugLog(`Summarise failed: ${e}`);
   }
