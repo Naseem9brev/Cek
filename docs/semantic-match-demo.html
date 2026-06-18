@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#faf3e0; --surface:#fffdf9; --text:#2a2218; --muted:#8a7968; --accent:#b85c38; --border:rgba(180,150,120,.32); }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { width:1100px; height:640px; font-family:Inter,sans-serif; background:#2a2a28; padding:24px; display:flex; gap:20px; }
+    .panel { background:var(--bg); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.35); }
+    .popup { width:380px; }
+    .popup-inner { padding:14px 16px 12px; }
+    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .wordmark { font:700 22px "DM Sans"; color:var(--accent); text-transform:lowercase; }
+    .link { font:500 12px Inter; color:var(--accent); background:none; border:none; }
+    .match-banner { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; }
+    .match-header { display:flex; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .match-text { font-size:12px; line-height:1.45; color:var(--text); }
+    .ws-badge { font-size:10px; padding:2px 8px; border-radius:999px; background:rgba(184,92,56,.12); color:var(--accent); white-space:nowrap; }
+    .actions { display:flex; gap:8px; }
+    .btn-primary { background:var(--accent); color:#fff; border:none; border-radius:999px; padding:6px 14px; font:500 12px Inter; }
+    .btn { background:transparent; border:1px solid var(--border); border-radius:999px; padding:6px 14px; font:500 12px Inter; color:var(--muted); }
+    .workspace-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+    .workspace-label { font-size:11px; color:var(--muted); }
+    .workspace-select { flex:1; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); font-size:12px; }
+    .semantic-note { font-size:11px; color:var(--muted); background:var(--surface); border:1px dashed var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+    .platform-strip { display:flex; gap:8px; margin-bottom:10px; }
+    .pill { font-size:11px; padding:5px 10px; border-radius:999px; border:1px solid var(--border); color:var(--muted); }
+    .detail { flex:1; background:#1a1a1a; border-radius:14px; padding:20px; color:#dcddde; }
+    .detail h2 { font:500 16px "DM Sans"; margin-bottom:4px; color:#e0e0e0; }
+    .detail .sub { font-size:12px; color:#999; margin-bottom:16px; }
+    .score-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .score-card { background:#252525; border:1px solid #3a3a3a; border-radius:8px; padding:10px; }
+    .score-card .label { font-size:10px; color:#999; text-transform:uppercase; letter-spacing:.06em; }
+    .score-card .value { font-size:20px; color:#4caf50; margin-top:4px; }
+    .score-card .value.amber { color:#e8b84a; }
+    pre { background:#111; border:1px solid #333; border-radius:8px; padding:12px; font:12px/1.5 "JetBrains Mono",monospace; color:#b8c4b8; overflow:hidden; }
+    .tag { display:inline-block; font-size:10px; padding:2px 7px; border-radius:4px; background:#333; color:#aaa; margin-right:6px; }
+  </style>
+</head>
+<body>
+  <div class="panel popup">
+    <div class="popup-inner">
+      <div class="header">
+        <span class="wordmark">cek</span>
+        <span class="link">Graph (14)</span>
+      </div>
+      <div class="match-banner">
+        <div class="match-header">
+          <p class="match-text">You explored <strong>React auth middleware</strong> with Claude on Jun 11 — inject context?</p>
+          <span class="ws-badge">SideProject</span>
+        </div>
+        <div class="actions">
+          <button class="btn-primary">Inject context</button>
+          <button class="btn">Dismiss</button>
+        </div>
+      </div>
+      <div class="semantic-note">✦ Hybrid match — keyword score 8 + semantic similarity 0.87</div>
+      <div class="workspace-row">
+        <span class="workspace-label">Workspace</span>
+        <select class="workspace-select"><option>SideProject</option><option>Work</option><option>General</option></select>
+      </div>
+      <div class="platform-strip">
+        <span class="pill">ChatGPT ~12 left</span>
+        <span class="pill">Claude ~28 left</span>
+      </div>
+    </div>
+  </div>
+  <div class="detail">
+    <h2>Semantic retrieval</h2>
+    <p class="sub">SCORE_CONTEXT_MATCH · hybrid keyword + cosine similarity</p>
+    <div class="score-grid">
+      <div class="score-card"><div class="label">Keyword score</div><div class="value">8</div></div>
+      <div class="score-card"><div class="label">Semantic similarity</div><div class="value amber">0.87</div></div>
+      <div class="score-card"><div class="label">Combined</div><div class="value">16.7</div></div>
+      <div class="score-card"><div class="label">Workspace filter</div><div class="value" style="font-size:14px;color:#dcddde">SideProject</div></div>
+    </div>
+    <span class="tag">Node embedding at summarise</span>
+    <span class="tag">Groq query embed</span>
+    <span class="tag">Local cosine match</span>
+    <pre>Matched node: React auth middleware patterns
+Entities: JWT, httpOnly cookies, Next.js middleware
+Prompt: "help me fix JWT refresh in Next.js middleware"
+→ Rephrased ask still matches via semantic similarity</pre>
+  </div>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { width:1100px; height:640px; font-family:Inter,sans-serif; background:#1e1e1e; display:flex; }
+    .obsidian { flex:1; display:flex; flex-direction:column; }
+    .titlebar { background:#2d2d2d; padding:10px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #3a3a3a; }
+    .dot { width:10px; height:10px; border-radius:50%; }
+    .titlebar span { color:#999; font-size:12px; margin-left:8px; }
+    .layout { display:flex; flex:1; }
+    .sidebar { width:220px; background:#252525; border-right:1px solid #3a3a3a; padding:12px; }
+    .sidebar h3 { font-size:10px; color:#777; text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+    .file { font-size:12px; color:#aaa; padding:5px 8px; border-radius:4px; margin-bottom:2px; }
+    .file.active { background:#3a3a3a; color:#e0e0e0; }
+    .editor { flex:1; padding:20px 24px; overflow:hidden; }
+    pre { font:13px/1.55 "JetBrains Mono",monospace; color:#d4d4d4; white-space:pre-wrap; }
+    .yaml { color:#9cdcfe; }
+    .key { color:#4ec9b0; }
+    .str { color:#ce9178; }
+    .heading { color:#dcdcaa; font-weight:600; }
+    .wikilink { color:#569cd6; }
+    .settings { width:340px; background:#faf3e0; border-left:1px solid #e0d8c0; padding:20px; color:#2a2218; }
+    .settings h2 { font:700 18px "DM Sans"; color:#b85c38; text-transform:lowercase; margin-bottom:16px; }
+    .card { background:#fffdf9; border:1px solid rgba(180,150,120,.32); border-radius:12px; padding:14px; margin-bottom:12px; }
+    .card h3 { font-size:14px; margin-bottom:6px; }
+    .hint { font-size:11px; color:#8a7968; line-height:1.45; margin-bottom:10px; }
+    .status { font-size:11px; color:#2d6a2d; margin-top:8px; }
+    .btn { display:inline-block; padding:6px 12px; border-radius:8px; border:1px solid rgba(180,150,120,.32); background:#fff; font-size:11px; margin-right:6px; }
+    .check { font-size:12px; margin:8px 0; }
+  </style>
+</head>
+<body>
+  <div class="obsidian">
+    <div class="titlebar">
+      <div class="dot" style="background:#ff5f57"></div>
+      <div class="dot" style="background:#febc2e"></div>
+      <div class="dot" style="background:#28c840"></div>
+      <span>Obsidian Vault / cek / react-auth-middleware-a3f2.md</span>
+    </div>
+    <div class="layout">
+      <div class="sidebar">
+        <h3>cek/</h3>
+        <div class="file active">react-auth-middleware-a3f2.md</div>
+        <div class="file">saas-market-sizing-b91c.md</div>
+        <div class="file">chrome-memory-layer-c4e1.md</div>
+        <div class="file">useeffect-cleanup-7d20.md</div>
+      </div>
+      <div class="editor">
+        <pre><span class="yaml">---</span>
+<span class="key">id</span>: <span class="str">"a3f2b1c0-..."</span>
+<span class="key">topic</span>: <span class="str">React auth middleware patterns</span>
+<span class="key">platform</span>: <span class="str">claude</span>
+<span class="key">date</span>: <span class="str">2026-06-11</span>
+<span class="key">workspace</span>: <span class="str">SideProject</span>
+<span class="key">entities</span>:
+  - <span class="str">JWT</span>
+  - <span class="str">httpOnly cookies</span>
+  - <span class="str">Next.js middleware</span>
+<span class="key">decisions</span>:
+  - <span class="str">Use httpOnly cookies for refresh tokens</span>
+<span class="key">openQuestions</span>:
+  - <span class="str">How to handle SSR with Next.js middleware?</span>
+<span class="key">turnCount</span>: <span class="str">12</span>
+<span class="yaml">---</span>
+
+<span class="heading"># React auth middleware patterns</span>
+
+<span class="heading">## Decisions</span>
+- Use httpOnly cookies for refresh tokens
+
+<span class="heading">## Entities</span>
+- <span class="wikilink">[[jwt]]</span>
+- <span class="wikilink">[[httponly-cookies]]</span>
+- <span class="wikilink">[[next-js-middleware]]</span>
+
+<span class="heading">## Related</span>
+- <span class="wikilink">[[jwt-refresh-flow-e82a]]</span> (<span class="wikilink">[[jwt]]</span>)
+- <span class="wikilink">[[next-js-middleware-f10b]]</span> (<span class="wikilink">[[next-js-middleware]]</span>)</pre>
+      </div>
+    </div>
+  </div>
+  <div class="settings">
+    <h2>cek settings</h2>
+    <div class="card">
+      <h3>Obsidian export</h3>
+      <p class="hint">Connect vault folder · auto-sync markdown with frontmatter + wikilinks</p>
+      <div class="check">☑ Auto-sync when a new memory node is created</div>
+      <span class="btn">Connect vault</span>
+      <span class="btn">Sync now</span>
+      <p class="status">✓ Vault connected · Synced 14 note(s) to cek/</p>
+    </div>
+    <div class="card">
+      <h3>Workspaces</h3>
+      <p class="hint">SideProject · Work · General</p>
+    </div>
+  </div>
+</body>
+</html>

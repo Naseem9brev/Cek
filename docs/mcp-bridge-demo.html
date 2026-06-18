@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { width:1100px; height:640px; font-family:Inter,sans-serif; background:#1a1a1a; display:flex; gap:0; }
+    .cursor { flex:1; display:flex; flex-direction:column; }
+    .cursor-bar { background:#252526; padding:8px 16px; border-bottom:1px solid #333; font-size:12px; color:#ccc; }
+    .cursor-main { display:flex; flex:1; }
+    .chat { flex:1; padding:20px; color:#d4d4d4; }
+    .chat h3 { font-size:14px; color:#fff; margin-bottom:12px; }
+    .tool-call { background:#252526; border:1px solid #3a3a3a; border-radius:8px; padding:12px; margin-bottom:10px; font-size:12px; }
+    .tool-name { color:#4ec9b0; font-family:"JetBrains Mono",monospace; font-size:11px; margin-bottom:6px; }
+    .tool-result { color:#9cdcfe; font-size:11px; line-height:1.5; font-family:"JetBrains Mono",monospace; }
+    .mcp-panel { width:320px; background:#252526; border-left:1px solid #333; padding:16px; }
+    .mcp-panel h2 { font-size:13px; color:#fff; margin-bottom:12px; }
+    .mcp-tool { background:#1e1e1e; border:1px solid #3a3a3a; border-radius:6px; padding:10px; margin-bottom:8px; }
+    .mcp-tool .name { font:12px "JetBrains Mono"; color:#dcdcaa; }
+    .mcp-tool .desc { font-size:11px; color:#999; margin-top:4px; line-height:1.4; }
+    .settings { width:300px; background:#faf3e0; padding:18px; color:#2a2218; }
+    .settings h2 { font:700 18px "DM Sans"; color:#b85c38; text-transform:lowercase; margin-bottom:14px; }
+    .card { background:#fffdf9; border:1px solid rgba(180,150,120,.32); border-radius:12px; padding:12px; margin-bottom:10px; font-size:11px; }
+    .card h3 { font-size:13px; margin-bottom:6px; }
+    .hint { color:#8a7968; line-height:1.45; margin-bottom:8px; }
+    code { font:11px "JetBrains Mono"; background:rgba(0,0,0,.06); padding:1px 4px; border-radius:3px; }
+    .status { color:#2d6a2d; margin-top:6px; }
+    pre.config { font:10px/1.4 "JetBrains Mono"; background:#111; color:#b8c4b8; padding:8px; border-radius:6px; margin-top:8px; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <div class="cursor">
+    <div class="cursor-bar">Cursor · Agent · MCP: cek connected</div>
+    <div class="cursor-main">
+      <div class="chat">
+        <h3>Implement JWT refresh middleware for Next.js</h3>
+        <div class="tool-call">
+          <div class="tool-name">cek.search_memory</div>
+          <div class="tool-result">query: "JWT refresh Next.js middleware"
+→ React auth middleware patterns (claude, SideProject)
+  decisions: Use httpOnly cookies for refresh tokens
+  entities: JWT, httpOnly cookies, Next.js middleware</div>
+        </div>
+        <div class="tool-call">
+          <div class="tool-name">cek.format_context_for_injection</div>
+          <div class="tool-result">[Context from Cek — explored with Claude on Jun 11]
+Topic: React auth middleware patterns
+Key decisions: Use httpOnly cookies for refresh tokens...</div>
+        </div>
+        <p style="font-size:12px;color:#999;margin-top:8px">Agent uses your cek memory without re-explaining prior Claude sessions.</p>
+      </div>
+      <div class="mcp-panel">
+        <h2>MCP Tools · cek</h2>
+        <div class="mcp-tool"><div class="name">search_memory</div><div class="desc">Keyword search with scoring on topic, entities, decisions</div></div>
+        <div class="mcp-tool"><div class="name">get_memory_node</div><div class="desc">Full node by id</div></div>
+        <div class="mcp-tool"><div class="name">list_memory_nodes</div><div class="desc">Summary list · workspace/platform filters</div></div>
+        <div class="mcp-tool"><div class="name">format_context_for_injection</div><div class="desc">Formatted injection block for IDE context</div></div>
+        <p style="font-size:10px;color:#666;margin-top:12px">Resource: memory://nodes</p>
+      </div>
+    </div>
+  </div>
+  <div class="settings">
+    <h2>cek settings</h2>
+    <div class="card">
+      <h3>Cursor / MCP</h3>
+      <p class="hint">Export <code>memory-export.json</code> to <code>~/.cek/</code></p>
+      <div class="check" style="margin:6px 0">☑ Auto-download export when a new node is created</div>
+      <p class="status">✓ Last export: 14 nodes · 38 embeddings</p>
+      <pre class="config">"cek": {
+  "command": "node",
+  "args": [".../mcp-server/dist/index.js"]
+}</pre>
+    </div>
+  </div>
+</body>
+</html>
