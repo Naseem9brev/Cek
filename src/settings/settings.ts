@@ -1,5 +1,6 @@
 import type { Settings } from "../lib/messaging";
-import { downloadMcpExport } from "../lib/mcp-export";
+import { iconHtml } from "../lib/icons";
+import { downloadMcpExportBundle } from "../lib/mcp-export";
 import { sendBackgroundMessage } from "../lib/messaging";
 import { getKnowledgeNodes } from "../lib/knowledge-nodes";
 import {
@@ -11,16 +12,60 @@ import { DEFAULT_SETTINGS, getSettings, saveSettings } from "../lib/storage";
 
 let settings: Settings = DEFAULT_SETTINGS;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let wizardStep = 0;
+
+const WIZARD_STEPS = [
+  {
+    title: "Your thoughts, remembered",
+    body: `<p>cek quietly captures your AI conversations and turns them into memory you can pick up anytime — everything stays on your device.</p>
+      <ul class="wizard-checklist">
+        <li>Turn on ChatGPT and Claude below</li>
+        <li>Enable Remember my chats when you're ready</li>
+      </ul>`,
+  },
+  {
+    title: "Smart features (optional)",
+    body: `<p>Add an API key to unlock smart search, auto titles, and richer memory. You can skip this and turn it on later.</p>`,
+  },
+  {
+    title: "You're ready",
+    body: `<p>Start a conversation on Claude or ChatGPT. cek handles the rest — open the popup anytime to browse memories or continue where you left off.</p>`,
+  },
+] as const;
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 
+function showWizardIfNeeded(): void {
+  if (settings.setupComplete) return;
+  wizardStep = 0;
+  renderWizardStep();
+  $("setup-wizard").classList.remove("hidden");
+}
+
+function renderWizardStep(): void {
+  const step = WIZARD_STEPS[wizardStep]!;
+  $("wizard-step-label").textContent = `Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`;
+  $("wizard-title").textContent = step.title;
+  $("wizard-body").innerHTML = step.body;
+  $("wizard-next").textContent =
+    wizardStep === WIZARD_STEPS.length - 1 ? "Get started" : "Continue";
+}
+
+async function finishWizard(): Promise<void> {
+  $("setup-wizard").classList.add("hidden");
+  settings.setupComplete = true;
+  await saveSettings(settings);
+}
+
 async function load(): Promise<void> {
   settings = await getSettings();
+  document.querySelector(".brand-mark")!.innerHTML = iconHtml("mark");
   bindToForm();
   renderWorkspaceList();
   renderDefaultWorkspaceSelect();
   void refreshObsidianStatus();
+  showWizardIfNeeded();
 }
 
 async function refreshObsidianStatus(): Promise<void> {
@@ -85,7 +130,7 @@ function renderWorkspaceList(): void {
     delBtn.type = "button";
     delBtn.className = "workspace-delete";
     delBtn.title = "Remove workspace";
-    delBtn.textContent = "✕";
+    delBtn.innerHTML = iconHtml("delete");
     delBtn.addEventListener("click", () => {
       if (settings.workspaces.length <= 1) return;
       const removed = settings.workspaces[i]!;
@@ -243,7 +288,22 @@ $("workspace-input").addEventListener("keydown", (e) => {
 $("mcp-export-btn").addEventListener("click", async () => {
   const res = await sendBackgroundMessage({ type: "SYNC_MCP_EXPORT" });
   if (res.ok && "data" in res && res.data) {
-    downloadMcpExport(res.data);
+    try {
+      const parsed = JSON.parse(res.data) as {
+        main?: string;
+        sidecar?: string | null;
+      };
+      if (parsed.main) {
+        downloadMcpExportBundle({
+          main: parsed.main,
+          sidecar: parsed.sidecar,
+        });
+      } else {
+        downloadMcpExportBundle({ main: res.data });
+      }
+    } catch {
+      downloadMcpExportBundle({ main: res.data });
+    }
     $("save-status").textContent = "MCP export downloaded";
     setTimeout(() => {
       $("save-status").textContent = "";
@@ -286,6 +346,49 @@ $("obsidian-sync-btn").addEventListener("click", async () => {
     settings.obsidian.vaultConnected = true;
     await saveSettings(settings);
   }
+});
+
+$("export-pinned-btn").addEventListener("click", async () => {
+  const res = await sendBackgroundMessage({ type: "EXPORT_PINNED" });
+  if (res.ok && "data" in res && res.data) {
+    const blob = new Blob([res.data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cek-pinned-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    $("save-status").textContent = "Saved to Downloads";
+    setTimeout(() => { $("save-status").textContent = ""; }, 1500);
+  }
+});
+
+$("export-memory-btn").addEventListener("click", async () => {
+  const res = await sendBackgroundMessage({ type: "EXPORT_KNOWLEDGE_NODES" });
+  if (res.ok && "data" in res && res.data) {
+    const blob = new Blob([res.data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cek-memory-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    $("save-status").textContent = "Backup saved";
+    setTimeout(() => { $("save-status").textContent = ""; }, 1500);
+  }
+});
+
+$("wizard-next").addEventListener("click", () => {
+  if (wizardStep < WIZARD_STEPS.length - 1) {
+    wizardStep++;
+    renderWizardStep();
+  } else {
+    void finishWizard();
+  }
+});
+
+$("wizard-skip").addEventListener("click", () => {
+  void finishWizard();
 });
 
 void load();
