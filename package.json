@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "node scripts/generate-icons.mjs && tsc && vite build",
     "build:mcp": "cd mcp-server && npm install && npm run build",
+    "benchmark": "npx tsx benchmarks/run.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
