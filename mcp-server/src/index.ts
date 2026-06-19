@@ -9,18 +9,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {
   formatContextInjection,
-  formatMergedContextInjection,
   searchMemory,
   summarizeNode,
 } from "./memory-search.js";
-import {
-  getCachedExport,
-  getNodeEmbeddings,
-  getNodes,
-  reloadMemoryExport,
-  resolveMemoryPath,
-  startMemoryWatcher,
-} from "./memory-store.js";
+import { getNodes, resolveMemoryPath } from "./memory-store.js";
 import type { KnowledgeNode, Platform } from "./types.js";
 
 const server = new Server(
@@ -52,7 +44,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "search_memory",
       description:
-        "Hybrid search (keyword prefilter + optional semantic when embeddings sidecar is present).",
+        "Search Cek knowledge nodes by keyword scoring on topic, entities, and decisions.",
       inputSchema: {
         type: "object",
         properties: {
@@ -114,9 +106,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  reloadMemoryExport();
   const nodes = getNodes();
-  const embeddings = getNodeEmbeddings();
   const args = request.params.arguments ?? {};
 
   switch (request.params.name) {
@@ -124,18 +114,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const query = String(args.query ?? "");
       const workspace =
         typeof args.workspace === "string" ? args.workspace : undefined;
-      const matches = searchMemory(query, nodes, {
-        workspace,
-        nodeEmbeddings: embeddings,
-      });
+      const matches = searchMemory(query, nodes, workspace);
       return textContent(
         JSON.stringify(
           matches.map((m) => ({
             id: m.node.id,
             topic: m.node.topic,
             score: m.score,
-            confidence: m.confidence,
-            reason: m.reason,
             platform: m.node.platform,
             workspace: m.node.workspace,
             date: m.node.date,
@@ -170,28 +155,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case "format_context_for_injection": {
       let node: KnowledgeNode | undefined;
-      let related: KnowledgeNode[] = [];
       const id = typeof args.id === "string" ? args.id : undefined;
       if (id) {
         node = nodes.find((n) => n.id === id);
-        related = node ? [node] : [];
       } else if (typeof args.query === "string" && args.query) {
         const workspace =
           typeof args.workspace === "string" ? args.workspace : undefined;
-        const matches = searchMemory(args.query, nodes, {
-          workspace,
-          nodeEmbeddings: embeddings,
-          topK: 3,
-        });
-        related = matches.map((m) => m.node);
-        node = related[0];
+        const matches = searchMemory(args.query, nodes, workspace);
+        node = matches[0]?.node;
       }
       if (!node) {
         return textContent(
           JSON.stringify({ error: "No matching node found" })
         );
       }
-      return textContent(formatMergedContextInjection(related));
+      return textContent(formatContextInjection(node));
     }
 
     default:
@@ -231,8 +209,6 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
 async function main(): Promise<void> {
   const path = resolveMemoryPath();
-  startMemoryWatcher(path);
-  getCachedExport();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error(`cek MCP server reading memory from ${path}`);

@@ -218,14 +218,7 @@ export async function loadAppState() {
         PendingContextMatch
       >) ?? {};
     const match = matches[activeTabId];
-    if (match && !match.dismissed) {
-      pendingContextMatch = {
-        ...match,
-        nodes: match.nodes?.length ? match.nodes : [match.node],
-        confidence: match.confidence ?? "medium",
-        reason: match.reason ?? "",
-      };
-    }
+    if (match && !match.dismissed) pendingContextMatch = match;
   }
 
   return {

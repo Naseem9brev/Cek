@@ -1,26 +1,14 @@
-import { SESSION_IDLE_MS, NODE_MERGE_THRESHOLD } from "../lib/constants";
+import { SESSION_IDLE_MS } from "../lib/constants";
 import type { Platform } from "../lib/constants";
-import { summariseSession, withRetry, embedText } from "../lib/groq";
+import { summariseSession, withRetry } from "../lib/groq";
 import type { KnowledgeNode, TurnCapturedPayload } from "../lib/messaging";
-import {
-  addKnowledgeNode,
-  getKnowledgeNodes,
-  mergeNodeContent,
-  updateKnowledgeNode,
-} from "../lib/knowledge-nodes";
-import {
-  buildNodeEmbedText,
-  embedKnowledgeNode,
-  getNodeEmbeddings,
-  setNodeEmbedding,
-} from "../lib/node-embeddings";
-import { findNearDuplicate } from "../lib/embeddings";
-import { nodeWorkspace } from "../lib/retrieval";
+import { addKnowledgeNode, getKnowledgeNodes } from "../lib/knowledge-nodes";
 import {
   buildMcpExportPayload,
   downloadMcpExportInBackground,
-  serializeMcpExportBundle,
+  serializeMcpExport,
 } from "../lib/mcp-export";
+import { embedKnowledgeNode, getNodeEmbeddings, setNodeEmbedding } from "../lib/node-embeddings";
 import {
   appendTurn,
   clearAllBuffersForTab,
@@ -69,20 +57,10 @@ async function afterNodeCreated(
   if (settings.export.mcpSyncEnabled) {
     void Promise.all([getKnowledgeNodes(), getNodeEmbeddings()])
       .then(([nodes, nodeEmbeddings]) => {
-        const payload = buildMcpExportPayload(nodes, nodeEmbeddings);
-        const bundle = serializeMcpExportBundle(payload, nodeEmbeddings);
-        return downloadMcpExportInBackground(bundle.main).then(() => {
-          if (bundle.sidecar) {
-            return chrome.downloads.download({
-              url: `data:application/json;charset=utf-8,${encodeURIComponent(
-                bundle.sidecar
-              )}`,
-              filename: "memory-export.embeddings.json",
-              saveAs: false,
-            });
-          }
-          return undefined;
-        });
+        const data = serializeMcpExport(
+          buildMcpExportPayload(nodes, nodeEmbeddings)
+        );
+        return downloadMcpExportInBackground(data);
       })
       .catch((e) => appendDebugLog(`MCP export failed: ${e}`));
   }
@@ -150,12 +128,7 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
       summariseSession(settings.groq.apiKey, turns, entry.platform)
     );
 
-    const workspace =
-      settings.activeWorkspace != null
-        ? settings.activeWorkspace
-        : "General";
-
-    const draft = {
+    const node = await addKnowledgeNode({
       id: generateId(),
       sessionId: entry.sessionId,
       topic: result.topic,
@@ -165,59 +138,14 @@ async function summariseBuffer(entry: SessionBufferEntry): Promise<void> {
       platform: entry.platform,
       date: Date.now(),
       turnCount: turns.length,
-      workspace,
-    };
+      ...(settings.activeWorkspace != null
+        ? { workspace: settings.activeWorkspace }
+        : {}),
+    });
 
-    let node: KnowledgeNode;
-    const existingNodes = await getKnowledgeNodes();
-    const nodeEmbeddings = await getNodeEmbeddings();
-
-    let mergeTarget: KnowledgeNode | null = null;
-    if (settings.groq.apiKey) {
-      try {
-        const vector = await withRetry(() =>
-          embedText(settings.groq.apiKey, buildNodeEmbedText(draft))
-        );
-        const scoped = existingNodes.filter(
-          (n) => nodeWorkspace(n) === workspace
-        );
-        const candidates = scoped
-          .filter((n) => nodeEmbeddings[n.id]?.length)
-          .map((n) => ({ id: n.id, vector: nodeEmbeddings[n.id]! }));
-        const dup = findNearDuplicate(
-          vector,
-          candidates,
-          NODE_MERGE_THRESHOLD
-        );
-        if (dup) {
-          mergeTarget = scoped.find((n) => n.id === dup.id) ?? null;
-        }
-      } catch {
-        // merge detection is best-effort
-      }
-    }
-
-    if (mergeTarget) {
-      const merged = mergeNodeContent(mergeTarget, draft);
-      const updated = await updateKnowledgeNode(mergeTarget.id, {
-        topic: merged.topic,
-        entities: merged.entities,
-        decisions: merged.decisions,
-        openQuestions: merged.openQuestions,
-        turnCount: merged.turnCount,
-        date: merged.date,
-        workspace: merged.workspace,
-      });
-      node = updated ?? (await addKnowledgeNode(draft));
-      await appendDebugLog(
-        `Merged session into node ${mergeTarget.id}: ${result.topic}`
-      );
-    } else {
-      node = await addKnowledgeNode(draft);
-      await appendDebugLog(
-        `Summarised session ${entry.sessionId}: ${result.topic}`
-      );
-    }
+    await appendDebugLog(
+      `Summarised session ${entry.sessionId}: ${result.topic}`
+    );
 
     void afterNodeCreated(node, settings);
   } catch (e) {

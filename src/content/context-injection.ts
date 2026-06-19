@@ -1,4 +1,3 @@
-import "./context-toast.css";
 import type { Platform } from "../lib/constants";
 import type { KnowledgeNode } from "../lib/messaging";
 import { sendBackgroundMessage } from "../lib/messaging";
@@ -49,10 +48,7 @@ export async function checkContextMatch(
     payload: {
       tabId: 0,
       nodeId: match.node.id,
-      nodeIds: [match.node.id],
       score: match.score,
-      confidence: match.confidence,
-      reason: match.reason,
     },
   });
 }
@@ -73,6 +69,13 @@ export function showContextToast(node: KnowledgeNode, onInject: () => void): voi
 
   toast = document.createElement("div");
   toast.id = TOAST_ID;
+  toast.style.cssText = `
+    position: fixed; bottom: 56px; right: 16px; z-index: 99999;
+    background: #FAF3E0; color: #1A3A1A; border: 1px solid #E0D8C0;
+    padding: 12px 14px; border-radius: 12px; max-width: 320px;
+    font: 13px Inter, sans-serif;
+    box-shadow: 0 2px 8px rgba(26,58,26,0.12);
+  `;
 
   const platform =
     node.platform.charAt(0).toUpperCase() + node.platform.slice(1);
@@ -81,12 +84,12 @@ export function showContextToast(node: KnowledgeNode, onInject: () => void): voi
   });
 
   toast.innerHTML = `
-    <p class="cek-toast-text">
+    <p style="margin:0 0 8px;line-height:1.4">
       You explored <strong>${escapeHtml(node.topic)}</strong> with ${platform} on ${date}.
     </p>
-    <div class="cek-toast-actions">
-      <button id="cek-inject-btn" class="cek-toast-inject" type="button">Inject context</button>
-      <button id="cek-dismiss-btn" class="cek-toast-dismiss" type="button">Dismiss</button>
+    <div style="display:flex;gap:8px">
+      <button id="cek-inject-btn" style="flex:1;padding:6px 10px;border:none;border-radius:999px;background:linear-gradient(180deg,#d4896a,#b85c38);color:#fff;font:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(184,92,56,0.28)">Inject context</button>
+      <button id="cek-dismiss-btn" style="padding:6px 10px;border:1px solid #E0D8C0;border-radius:999px;background:#fff;color:#1A3A1A;font:inherit;cursor:pointer">Dismiss</button>
     </div>
   `;
 

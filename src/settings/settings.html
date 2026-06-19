@@ -4,213 +4,164 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cek — Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./settings.css" />
   </head>
   <body>
-    <div id="setup-wizard" class="wizard hidden" role="dialog" aria-labelledby="wizard-title">
-      <div class="wizard-card">
-        <p class="wizard-step-label" id="wizard-step-label">Step 1 of 3</p>
-        <h2 id="wizard-title" class="wizard-title">Welcome to cek</h2>
-        <div id="wizard-body" class="wizard-body"></div>
-        <div class="wizard-actions">
-          <button type="button" id="wizard-skip" class="btn-ghost">Skip</button>
-          <button type="button" id="wizard-next" class="btn-primary">Continue</button>
-        </div>
-      </div>
-    </div>
-
     <main class="settings-page">
-      <header class="settings-header">
-        <div class="brand-row">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <h1 class="wordmark">cek</h1>
-        </div>
-        <p class="settings-subtitle">Settings</p>
-      </header>
+      <h1>Settings</h1>
 
-      <section class="card essentials">
-        <h2>Essentials</h2>
-        <p class="hint">Everything you need to get started.</p>
-        <div class="toggle-row">
-          <span>ChatGPT</span>
-          <label class="toggle">
-            <input type="checkbox" id="chatgpt-enabled" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-        <div class="toggle-row">
-          <span>Claude</span>
-          <label class="toggle">
-            <input type="checkbox" id="claude-enabled" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-        <div class="toggle-row highlight">
-          <div>
-            <span>Remember my chats</span>
-            <p class="row-hint">Builds memory from your conversations</p>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="feat-summarise" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
+      <section class="card">
+        <h2>ChatGPT</h2>
+        <label class="row">
+          <input type="checkbox" id="chatgpt-enabled" />
+          Enabled
+        </label>
+        <label class="row">
+          Tier
+          <select id="chatgpt-tier">
+            <option value="free">Free</option>
+            <option value="plus">Plus</option>
+          </select>
+        </label>
       </section>
 
-      <details class="card collapsible" open>
-        <summary>Plan limits</summary>
-        <div class="collapsible-body">
-          <label class="field">
-            ChatGPT plan
-            <select id="chatgpt-tier">
-              <option value="free">Free</option>
-              <option value="plus">Plus</option>
-            </select>
-          </label>
-          <label class="field">
-            Claude plan
-            <select id="claude-tier">
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-            </select>
-          </label>
+      <section class="card">
+        <h2>Claude</h2>
+        <label class="row">
+          <input type="checkbox" id="claude-enabled" />
+          Enabled
+        </label>
+        <label class="row">
+          Tier
+          <select id="claude-tier">
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card disabled">
+        <h2>Gemini <span class="badge">Coming soon</span></h2>
+      </section>
+
+      <section class="card">
+        <h2>Smart features (Groq)</h2>
+        <p class="hint">Prompt text is sent to Groq only when smart features are on.</p>
+        <label class="row">
+          <input type="checkbox" id="groq-enabled" />
+          Enable smart features
+        </label>
+        <label class="row">
+          API key
+          <input type="password" id="groq-api-key" placeholder="gsk_…" autocomplete="off" />
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-semantic" />
+          Semantic search
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-titles" />
+          Auto session titles
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-dedupe" />
+          Near-duplicate detection
+        </label>
+        <label class="row">
+          <input type="checkbox" id="feat-summarise" />
+          Session summarisation (knowledge graph)
+        </label>
+        <label class="row">
+          Duplicate sensitivity
+          <input type="range" id="dup-threshold" min="85" max="98" value="92" />
+          <span id="dup-threshold-val">0.92</span>
+        </label>
+        <label class="row">
+          Duplicate action
+          <select id="dup-action">
+            <option value="flag">Flag similar</option>
+            <option value="skip">Skip logging</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Workspaces</h2>
+        <p class="hint">Project profiles tag memory nodes when sessions are summarised. Filter context injection by workspace in the popup.</p>
+        <label class="field">
+          Default workspace
+          <select id="default-workspace"></select>
+        </label>
+        <div class="workspace-add">
+          <input type="text" id="workspace-input" placeholder="New workspace name" autocomplete="off" />
+          <button type="button" id="workspace-add-btn" class="workspace-btn">Add</button>
         </div>
-      </details>
+        <ul id="workspace-list" class="workspace-list"></ul>
+      </section>
 
-      <details class="card collapsible">
-        <summary>Smart features</summary>
-        <div class="collapsible-body">
-          <p class="hint">Optional — adds search, titles, and smarter memory. Text is sent to Groq only when enabled.</p>
-          <div class="toggle-row">
-            <span>Enable Smart</span>
-            <label class="toggle">
-              <input type="checkbox" id="groq-enabled" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <label class="field">
-            API key
-            <input type="password" id="groq-api-key" placeholder="gsk_…" autocomplete="off" />
-          </label>
-          <div class="feature-grid">
-            <div class="toggle-row compact">
-              <span>Smart search</span>
-              <label class="toggle">
-                <input type="checkbox" id="feat-semantic" />
-                <span class="toggle-track"></span>
-              </label>
-            </div>
-            <div class="toggle-row compact">
-              <span>Auto session titles</span>
-              <label class="toggle">
-                <input type="checkbox" id="feat-titles" />
-                <span class="toggle-track"></span>
-              </label>
-            </div>
-            <div class="toggle-row compact">
-              <span>Similar prompt detection</span>
-              <label class="toggle">
-                <input type="checkbox" id="feat-dedupe" />
-                <span class="toggle-track"></span>
-              </label>
-            </div>
-          </div>
-          <label class="field">
-            Similarity sensitivity
-            <input type="range" id="dup-threshold" min="85" max="98" value="92" />
-            <span id="dup-threshold-val" class="mono">0.92</span>
-          </label>
-          <label class="field">
-            When similar
-            <select id="dup-action">
-              <option value="flag">Mark as similar</option>
-              <option value="skip">Don't save</option>
-            </select>
-          </label>
+      <section class="card">
+        <h2>Obsidian export</h2>
+        <p class="hint">
+          Connect an Obsidian vault folder to auto-sync memory notes as markdown
+          with YAML frontmatter and wikilinks.
+        </p>
+        <label class="field">
+          Subfolder in vault
+          <input type="text" id="obsidian-subfolder" placeholder="cek" autocomplete="off" />
+        </label>
+        <label class="row">
+          <input type="checkbox" id="obsidian-auto-sync" />
+          Auto-sync when a new memory node is created
+        </label>
+        <div class="row">
+          <button type="button" id="obsidian-connect-btn" class="btn-secondary">
+            Connect vault folder
+          </button>
+          <button type="button" id="obsidian-sync-btn" class="btn-secondary">
+            Sync now
+          </button>
         </div>
-      </details>
+        <p class="hint" id="obsidian-status">Vault not connected</p>
+      </section>
 
-      <details class="card collapsible">
-        <summary>Workspaces</summary>
-        <div class="collapsible-body">
-          <p class="hint">Tag memories by project so context stays scoped.</p>
-          <label class="field">
-            Default workspace
-            <select id="default-workspace"></select>
-          </label>
-          <div class="workspace-add">
-            <input type="text" id="workspace-input" placeholder="New workspace name" autocomplete="off" />
-            <button type="button" id="workspace-add-btn" class="btn-secondary">Add</button>
-          </div>
-          <ul id="workspace-list" class="workspace-list"></ul>
+      <section class="card">
+        <h2>Cursor / MCP</h2>
+        <p class="hint">
+          Export memory for the Cek MCP server. Copy
+          <code>memory-export.json</code> to
+          <code>~/.cek/memory-export.json</code> (or set
+          <code>CEK_MEMORY_PATH</code> in Cursor).
+        </p>
+        <label class="row">
+          <input type="checkbox" id="mcp-sync-enabled" />
+          Auto-download export when a new memory node is created
+        </label>
+        <div class="row">
+          <button type="button" id="mcp-export-btn" class="btn-secondary">
+            Export memory for MCP now
+          </button>
         </div>
-      </details>
+        <p class="hint" id="mcp-path-hint">
+          Default MCP path: ~/.cek/memory-export.json
+        </p>
+      </section>
 
-      <details class="card collapsible">
-        <summary>Backups &amp; exports</summary>
-        <div class="collapsible-body">
-          <p class="hint">Download your data locally anytime.</p>
-          <div class="btn-row">
-            <button type="button" id="export-pinned-btn" class="btn-secondary">Download pinned prompts</button>
-            <button type="button" id="export-memory-btn" class="btn-secondary">Download backup</button>
-          </div>
-
-          <h3 class="subheading">Obsidian</h3>
-          <p class="hint">Sync memory notes to your vault as markdown.</p>
-          <label class="field">
-            Subfolder in vault
-            <input type="text" id="obsidian-subfolder" placeholder="cek" autocomplete="off" />
-          </label>
-          <div class="toggle-row">
-            <span>Auto-sync new memories</span>
-            <label class="toggle">
-              <input type="checkbox" id="obsidian-auto-sync" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="obsidian-connect-btn" class="btn-secondary">Connect vault</button>
-            <button type="button" id="obsidian-sync-btn" class="btn-secondary">Sync now</button>
-          </div>
-          <p class="hint" id="obsidian-status">Vault not connected</p>
-
-          <h3 class="subheading">Cursor / MCP</h3>
-          <p class="hint">
-            Export for the Cek MCP server at
-            <code>~/.cek/memory-export.json</code>
-          </p>
-          <div class="toggle-row">
-            <span>Auto-download on new memory</span>
-            <label class="toggle">
-              <input type="checkbox" id="mcp-sync-enabled" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="mcp-export-btn" class="btn-secondary">Export for MCP</button>
-          </div>
-        </div>
-      </details>
-
-      <details class="card collapsible">
-        <summary>Advanced</summary>
-        <div class="collapsible-body">
-          <div class="toggle-row">
-            <span>Debug mode</span>
-            <label class="toggle">
-              <input type="checkbox" id="debug-mode" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <span>Status badge on AI pages</span>
-            <label class="toggle">
-              <input type="checkbox" id="on-page-badge" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-        </div>
-      </details>
+      <section class="card">
+        <h2>Advanced</h2>
+        <label class="row">
+          <input type="checkbox" id="debug-mode" />
+          Debug mode
+        </label>
+        <label class="row">
+          <input type="checkbox" id="on-page-badge" />
+          On-page context badge
+        </label>
+      </section>
 
       <p id="save-status" class="save-status"></p>
     </main>

@@ -7,8 +7,8 @@
   --graph-text: #dcddde;
   --graph-muted: #999;
   --graph-dim: #555;
-  --graph-accent: #b85c38;
-  --graph-accent-soft: rgba(184, 92, 56, 0.35);
+  --graph-accent: #7c6cff;
+  --graph-accent-soft: rgba(124, 108, 255, 0.35);
   --graph-node: #6b6b6b;
   --graph-node-border: #888;
   --graph-edge: #444;
@@ -29,7 +29,7 @@ body {
   overflow: hidden;
   background: var(--graph-bg);
   color: var(--graph-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 13px;
 }
 
@@ -60,15 +60,12 @@ body {
 }
 
 .wordmark {
-  font-family: inherit;
-  font-weight: 600;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
   font-size: 20px;
-  letter-spacing: -0.03em;
   text-transform: lowercase;
-  background: linear-gradient(135deg, #c47050 0%, #b85c38 48%, #d4896a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--graph-highlight);
+  letter-spacing: -0.02em;
 }
 
 .panel-sub {
