@@ -1,8 +1,6 @@
 import type { KnowledgeNode } from "./messaging";
 
 export const MCP_EXPORT_VERSION = 1;
-/** Skip embeddings in export when serialized size exceeds this (bytes) */
-const MAX_EMBEDDINGS_BYTES = 100_000;
 
 export interface McpExportPayload {
   version: number;
@@ -15,24 +13,50 @@ export function buildMcpExportPayload(
   nodes: KnowledgeNode[],
   nodeEmbeddings?: Record<string, number[]>
 ): McpExportPayload {
-  const payload: McpExportPayload = {
+  return {
     version: MCP_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     nodes,
+    nodeEmbeddings,
   };
+}
 
-  if (nodeEmbeddings && Object.keys(nodeEmbeddings).length > 0) {
-    const serialized = JSON.stringify(nodeEmbeddings);
-    if (serialized.length <= MAX_EMBEDDINGS_BYTES) {
-      payload.nodeEmbeddings = nodeEmbeddings;
-    }
+/** Sidecar path sibling to main export file */
+export function mcpEmbeddingsSidecarPath(mainPath: string): string {
+  return mainPath.replace(/\.json$/i, "") + ".embeddings.json";
+}
+
+export function serializeMcpExportBundle(
+  payload: McpExportPayload,
+  nodeEmbeddings?: Record<string, number[]>
+): { main: string; sidecar?: string } {
+  const { nodeEmbeddings: _omit, ...mainPayload } = payload;
+  void _omit;
+  const main = JSON.stringify(
+    { ...mainPayload, hasEmbeddingsSidecar: !!nodeEmbeddings?.length },
+    null,
+    2
+  );
+  if (!nodeEmbeddings || !Object.keys(nodeEmbeddings).length) {
+    return { main };
   }
-
-  return payload;
+  return {
+    main,
+    sidecar: JSON.stringify(
+      {
+        version: MCP_EXPORT_VERSION,
+        exportedAt: payload.exportedAt,
+        nodeEmbeddings,
+      },
+      null,
+      2
+    ),
+  };
 }
 
 export function serializeMcpExport(payload: McpExportPayload): string {
-  return JSON.stringify(payload, null, 2);
+  const bundle = serializeMcpExportBundle(payload, payload.nodeEmbeddings);
+  return bundle.main;
 }
 
 /** Download memory-export.json in a page context (settings, popup). */
@@ -44,6 +68,22 @@ export function downloadMcpExport(data: string): void {
   a.download = "memory-export.json";
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadMcpExportBundle(bundle: {
+  main: string;
+  sidecar?: string | null;
+}): void {
+  downloadMcpExport(bundle.main);
+  if (bundle.sidecar) {
+    const blob = new Blob([bundle.sidecar], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "memory-export.embeddings.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /** Download from the service worker when auto-sync is enabled. */
