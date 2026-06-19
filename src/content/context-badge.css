@@ -1,0 +1,30 @@
+#cek-context-badge {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 99998;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 247, 0.92);
+  backdrop-filter: blur(16px) saturate(165%);
+  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 2px 4px rgba(42, 34, 24, 0.06),
+    0 8px 20px rgba(42, 34, 24, 0.1);
+  color: #2a2218;
+  font: 500 12px -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  pointer-events: none;
+}
+
+#cek-context-badge::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #b85c38;
+  vertical-align: middle;
+  box-shadow: 0 0 6px rgba(184, 92, 56, 0.5);
+}
