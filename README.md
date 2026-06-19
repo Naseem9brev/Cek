@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/icons/icon128.png" alt="cek logo" width="96" height="96" />
+  <img src="docs/logo.png" alt="cek logo — knowledge graph with checkmark" width="128" height="128" />
 </p>
 
 <h1 align="center">cek</h1>
