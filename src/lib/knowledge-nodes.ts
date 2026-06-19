@@ -59,6 +59,56 @@ export async function addKnowledgeNode(
   return full;
 }
 
+export async function updateKnowledgeNode(
+  id: string,
+  patch: Partial<
+    Pick<
+      KnowledgeNode,
+      | "topic"
+      | "entities"
+      | "decisions"
+      | "openQuestions"
+      | "turnCount"
+      | "date"
+      | "workspace"
+    >
+  >
+): Promise<KnowledgeNode | null> {
+  const nodes = await getKnowledgeNodes();
+  const idx = nodes.findIndex((n) => n.id === id);
+  if (idx < 0) return null;
+
+  const merged = { ...nodes[idx], ...patch };
+  const full: KnowledgeNode = {
+    ...merged,
+    searchTokens: buildSearchTokens(merged),
+  };
+  nodes[idx] = full;
+  await saveKnowledgeNodes(nodes);
+  return full;
+}
+
+export function mergeNodeContent(
+  existing: KnowledgeNode,
+  incoming: Omit<KnowledgeNode, "searchTokens">
+): Omit<KnowledgeNode, "searchTokens"> {
+  const uniq = (a: string[], b: string[]) =>
+    [...new Set([...a, ...b].map((s) => s.trim()).filter(Boolean))];
+
+  return {
+    ...existing,
+    topic: incoming.topic.length > existing.topic.length ? incoming.topic : existing.topic,
+    entities: uniq(existing.entities, incoming.entities),
+    decisions: uniq(existing.decisions, incoming.decisions),
+    openQuestions: uniq(existing.openQuestions, incoming.openQuestions),
+    turnCount: existing.turnCount + incoming.turnCount,
+    date: Math.max(existing.date, incoming.date),
+    platform: incoming.platform,
+    sessionId: existing.sessionId,
+    workspace: existing.workspace ?? incoming.workspace,
+  };
+}
+
 export async function getKnowledgeNodeById(id: string): Promise<KnowledgeNode | null> {
   const nodes = await getKnowledgeNodes();
   return nodes.find((n) => n.id === id) ?? null;
