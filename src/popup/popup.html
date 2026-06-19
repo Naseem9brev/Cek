@@ -7,15 +7,32 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <div id="app">
+    <div id="loading-skeleton" class="loading-skeleton" aria-hidden="true">
+      <div class="skel-bar"></div>
+      <div class="skel-bar short"></div>
+      <div class="skel-row"></div>
+      <div class="skel-row"></div>
+    </div>
+
+    <div id="app" class="hidden">
       <header class="header">
-        <h1 class="wordmark">cek</h1>
+        <div class="header-brand">
+          <h1 class="wordmark">cek</h1>
+          <p class="tagline">Your AI memory layer</p>
+        </div>
         <div class="header-actions">
-          <button id="graph-btn" class="link-btn header-link" type="button" title="Knowledge graph">Graph</button>
           <span id="groq-indicator" class="groq-indicator hidden" title="Smart features on">✦</span>
-          <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+          <button id="settings-btn" class="icon-btn" type="button" title="Settings" aria-label="Settings"></button>
         </div>
       </header>
+
+      <div id="memory-strip" class="memory-strip">
+        <div class="memory-strip-main">
+          <span id="memory-strip-icon" class="memory-strip-icon" aria-hidden="true"></span>
+          <span id="memory-strip-text" class="memory-strip-text">Loading memory…</span>
+        </div>
+        <span id="memory-status-pill" class="status-pill">—</span>
+      </div>
 
       <div id="context-match-banner" class="context-match-banner hidden">
         <div class="context-match-header">
@@ -33,51 +50,79 @@
         <button id="setup-link" class="link-btn">Set up your tiers →</button>
       </div>
 
-      <div id="platform-strip" class="platform-strip"></div>
+      <nav class="tab-bar" role="tablist">
+        <button id="tab-memory" class="tab-btn active" type="button" role="tab" aria-selected="true">Memory</button>
+        <button id="tab-prompts" class="tab-btn" type="button" role="tab" aria-selected="false">Prompts</button>
+      </nav>
 
-      <div class="workspace-row">
-        <label for="workspace-select" class="workspace-label">Workspace</label>
-        <select id="workspace-select" class="workspace-select" aria-label="Workspace filter"></select>
+      <div id="panel-memory" class="tab-panel" role="tabpanel">
+        <section id="memory-list-section" class="memory-list-section">
+          <div id="memory-list" class="memory-list"></div>
+          <div id="memory-empty" class="empty-state rich hidden">
+            <p class="empty-title">No memory yet</p>
+            <p class="empty-hint">Chat on Claude or ChatGPT with session summarisation enabled — cek will distill each session into a knowledge node.</p>
+            <button id="memory-setup-btn" class="pill-btn primary" type="button">Enable in settings</button>
+          </div>
+        </section>
       </div>
 
-      <section id="context-section" class="context-section hidden">
-        <div class="context-meta">
-          <span id="context-model"></span>
-          <span id="context-counts" class="mono"></span>
-        </div>
-        <div class="progress-track">
-          <div id="context-bar" class="progress-fill"></div>
-        </div>
-        <p id="context-readout" class="context-readout"></p>
-      </section>
+      <div id="panel-prompts" class="tab-panel hidden" role="tabpanel">
+        <div id="platform-strip" class="platform-strip"></div>
 
-      <div class="search-row">
-        <input
-          id="search-input"
-          type="search"
-          placeholder="Search prompts…"
-          autocomplete="off"
-        />
-        <button id="semantic-btn" class="pill-btn hidden" type="button">Semantic</button>
+        <div id="workspace-row" class="workspace-row hidden">
+          <label for="workspace-select" class="workspace-label">Workspace</label>
+          <select id="workspace-select" class="workspace-select" aria-label="Workspace filter"></select>
+        </div>
+
+        <section id="context-section" class="context-section hidden">
+          <div class="context-meta">
+            <span id="context-model"></span>
+            <span id="context-counts" class="mono"></span>
+          </div>
+          <div class="progress-track">
+            <div id="context-bar" class="progress-fill"></div>
+          </div>
+          <p id="context-readout" class="context-readout"></p>
+        </section>
+
+        <div class="search-row">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Search prompts…"
+            autocomplete="off"
+          />
+          <button id="semantic-btn" class="pill-btn hidden" type="button">Semantic</button>
+        </div>
+
+        <section id="pinned-section" class="pinned-section hidden">
+          <button id="pinned-toggle" class="section-toggle" type="button">
+            ▼ Pinned (<span id="pinned-count">0</span>)
+          </button>
+          <div id="pinned-list" class="prompt-list"></div>
+        </section>
+
+        <section id="history-section" class="history-section">
+          <div id="history-list"></div>
+          <div id="empty-state" class="empty-state rich hidden">
+            <p class="empty-title">Nothing captured yet</p>
+            <p class="empty-hint">Start a conversation on Claude or ChatGPT — your prompts appear here automatically.</p>
+          </div>
+        </section>
       </div>
-
-      <section id="pinned-section" class="pinned-section hidden">
-        <button id="pinned-toggle" class="section-toggle" type="button">
-          ▼ Pinned (<span id="pinned-count">0</span>)
-        </button>
-        <div id="pinned-list" class="prompt-list"></div>
-      </section>
-
-      <section id="history-section" class="history-section">
-        <div id="history-list"></div>
-        <p id="empty-state" class="empty-state">Nothing yet. Start a conversation.</p>
-      </section>
 
       <footer class="footer">
-        <button id="export-btn" class="link-btn" type="button">Export pinned</button>
-        <button id="export-nodes-btn" class="link-btn" type="button">Export memory</button>
-        <button id="export-obsidian-btn" class="link-btn" type="button">Export Obsidian</button>
-        <button id="export-mcp-btn" class="link-btn" type="button">Export MCP</button>
+        <button id="graph-btn" class="footer-primary" type="button" title="Open knowledge graph">
+          <span class="footer-primary-icon" aria-hidden="true"></span>
+          <span id="graph-btn-label">Graph</span>
+        </button>
+        <div class="footer-menu-wrap">
+          <button id="footer-menu-btn" class="icon-btn" type="button" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false"></button>
+          <div id="footer-menu" class="footer-menu hidden" role="menu">
+            <button id="export-btn" class="footer-menu-item" type="button" role="menuitem">Export pinned prompts</button>
+            <button id="export-nodes-btn" class="footer-menu-item" type="button" role="menuitem">Export memory (JSON)</button>
+          </div>
+        </div>
       </footer>
     </div>
     <script type="module" src="./popup.ts"></script>

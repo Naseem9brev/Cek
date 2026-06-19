@@ -26,6 +26,12 @@
   --duration-fast: 160ms;
   --duration-normal: 280ms;
   --duration-slow: 420ms;
+
+  /* Injected page toast (content script) */
+  --toast-bg: rgba(255, 252, 247, 0.92);
+  --toast-text: #2a2218;
+  --toast-border: rgba(255, 255, 255, 0.72);
+  --toast-shadow: 0 2px 4px rgba(42, 34, 24, 0.06), 0 12px 28px rgba(42, 34, 24, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

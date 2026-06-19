@@ -84,6 +84,10 @@ export const SUMMARISE_TRANSCRIPT_MAX_CHARS = 6000;
 export const CONTEXT_MATCH_THRESHOLD = 3;
 /** Min cosine similarity (0–1) when semantic node matching is enabled */
 export const SEMANTIC_MATCH_THRESHOLD = 0.72;
+/** Merge new session into existing node when embedding similarity exceeds this */
+export const NODE_MERGE_THRESHOLD = 0.88;
+export const CONTEXT_INJECT_TOP_K = 3;
+export const PREFILTER_TOP_K = 20;
 export const DUPLICATE_LOOKBACK = 30;
 export const DEFAULT_DUPLICATE_THRESHOLD = 0.92;
 export const EXACT_DEDUPE_MS = 2000;

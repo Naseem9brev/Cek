@@ -57,10 +57,34 @@ function findRelatedNodes(
   return related.sort((a, b) => b.sharedEntities.length - a.sharedEntities.length);
 }
 
+function buildEntityLinkMap(nodes: KnowledgeNode[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const node of nodes) {
+    const stem = noteStem(nodeFilename(node));
+    for (const entity of node.entities) {
+      const key = entity.toLowerCase().trim();
+      if (!key) continue;
+      const topicHit = node.topic.toLowerCase().includes(key);
+      if (!map.has(key) || topicHit) {
+        map.set(key, stem);
+      }
+    }
+  }
+  return map;
+}
+
+function entityLink(entity: string, linkMap: Map<string, string>): string {
+  const key = entity.toLowerCase().trim();
+  const target = linkMap.get(key);
+  if (target) return `[[${target}|${entity}]]`;
+  return entity;
+}
+
 export function nodeToMarkdown(
   node: KnowledgeNode,
   allNodes: KnowledgeNode[] = []
 ): string {
+  const linkMap = buildEntityLinkMap(allNodes);
   const lines: string[] = ["---"];
   lines.push(`id: ${yamlScalar(node.id)}`);
   lines.push(`topic: ${yamlScalar(node.topic)}`);
@@ -100,7 +124,7 @@ export function nodeToMarkdown(
   if (node.entities.length > 0) {
     lines.push("## Entities");
     for (const entity of node.entities) {
-      lines.push(`- [[${sanitizeFilename(entity)}]]`);
+      lines.push(`- ${entityLink(entity, linkMap)}`);
     }
     lines.push("");
   }
@@ -111,7 +135,7 @@ export function nodeToMarkdown(
     for (const { node: other, sharedEntities } of related) {
       const target = noteStem(nodeFilename(other));
       const via = sharedEntities
-        .map((e) => `[[${sanitizeFilename(e)}]]`)
+        .map((e) => entityLink(e, linkMap))
         .join(", ");
       lines.push(`- [[${target}]] (${via})`);
     }
