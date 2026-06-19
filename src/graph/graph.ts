@@ -108,7 +108,6 @@ let network: GraphNetwork | null = null;
 let nodeDataset: VisDataSet | null = null;
 let edgeDataset: VisDataSet | null = null;
 let selectedId: string | null = null;
-let pendingFocusNodeId: string | null = null;
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -479,16 +478,7 @@ function renderGraph(): void {
   updateInsightPanel(knowledge, graphNodes, entityMeta);
   updateFooter(graphNodes.length, graphEdges.length);
 
-  setTimeout(() => {
-    network?.fit({ animation: true });
-    if (pendingFocusNodeId && network) {
-      const id = pendingFocusNodeId;
-      pendingFocusNodeId = null;
-      network.focus(id, { scale: 1.15, animation: true });
-      selectedId = id;
-      showSelection(id);
-    }
-  }, 300);
+  setTimeout(() => network?.fit({ animation: true }), 300);
 }
 
 function bindNetworkEvents(): void {
@@ -710,8 +700,6 @@ async function loadNodes(): Promise<void> {
   const settings = await getSettings();
   const params = new URLSearchParams(location.search);
   const urlWorkspace = params.get("workspace");
-  const urlNode = params.get("node");
-  if (urlNode) pendingFocusNodeId = urlNode;
   if (urlWorkspace) {
     filterWorkspace = urlWorkspace;
   } else {

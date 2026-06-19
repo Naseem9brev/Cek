@@ -3,11 +3,7 @@ import {
   getContextMax,
 } from "../lib/constants";
 import { checkNearDuplicate } from "../lib/duplicates";
-import { scorePromptHybridTopK } from "../lib/context-match";
-import {
-  cachePromptEmbedding,
-  getCachedPromptEmbedding,
-} from "../lib/embedding-cache";
+import { scorePromptHybrid } from "../lib/context-match";
 import { buildObsidianBundle } from "../lib/obsidian-export";
 import { syncNodesToVault } from "../lib/vault-sync";
 import { embedText, generateSessionTitle, withRetry } from "../lib/groq";
@@ -47,7 +43,7 @@ import type { Platform } from "../lib/constants";
 import { getKnowledgeNodes } from "../lib/knowledge-nodes";
 import {
   buildMcpExportPayload,
-  serializeMcpExportBundle,
+  serializeMcpExport,
 } from "../lib/mcp-export";
 import {
   handleContextMatchFound,
@@ -366,40 +362,26 @@ async function handleScoreContextMatch(
 
   let queryEmbedding: number[] | undefined;
   if (settings.groq.enabled && settings.groq.apiKey) {
-    const cached = await getCachedPromptEmbedding(prompt);
-    if (cached) {
-      queryEmbedding = cached;
-    } else {
-      try {
-        queryEmbedding = await withRetry(() =>
-          embedText(settings.groq.apiKey, prompt)
-        );
-        void cachePromptEmbedding(prompt, queryEmbedding);
-      } catch (e) {
-        await appendDebugLog(`Context match embed failed: ${e}`);
-      }
+    try {
+      queryEmbedding = await withRetry(() =>
+        embedText(settings.groq.apiKey, prompt)
+      );
+    } catch (e) {
+      await appendDebugLog(`Context match embed failed: ${e}`);
     }
   }
 
   const workspaceFilter =
     workspace !== undefined ? workspace : settings.activeWorkspace;
 
-  const ranked = scorePromptHybridTopK(prompt, nodes, {
+  const match = scorePromptHybrid(prompt, nodes, {
     queryEmbedding,
     nodeEmbeddings,
     workspaceFilter,
   });
 
-  if (!ranked.length) return { ok: true, matches: [] };
-
-  const matches = ranked.map((m) => ({
-    node: m.node,
-    score: m.score,
-    confidence: m.confidence,
-    reason: m.reason,
-  }));
-
-  return { ok: true, matches, match: matches[0] ?? null };
+  if (!match) return { ok: true };
+  return { ok: true, match };
 }
 
 async function handleSyncMcpExport(): Promise<BackgroundResponse> {
@@ -408,14 +390,7 @@ async function handleSyncMcpExport(): Promise<BackgroundResponse> {
     getNodeEmbeddings(),
   ]);
   const payload = buildMcpExportPayload(nodes, nodeEmbeddings);
-  const bundle = serializeMcpExportBundle(payload, nodeEmbeddings);
-  return {
-    ok: true,
-    data: JSON.stringify({
-      main: bundle.main,
-      sidecar: bundle.sidecar ?? null,
-    }),
-  };
+  return { ok: true, data: serializeMcpExport(payload) };
 }
 
 async function resolveTargetTabId(
