@@ -72,22 +72,40 @@ export interface SummariseResult {
   openQuestions: string[];
 }
 
-function buildTranscript(turns: Turn[]): string {
+function buildFullTranscript(turns: Turn[]): string {
   const lines: string[] = [];
   for (const t of turns) {
     lines.push(`User: ${t.prompt}`);
     lines.push(`Assistant: ${t.response}`);
   }
-  return lines.join("\n\n").slice(0, SUMMARISE_TRANSCRIPT_MAX_CHARS);
+  return lines.join("\n\n");
 }
 
-export async function summariseSession(
-  apiKey: string,
-  turns: Turn[],
-  platform: Platform
-): Promise<SummariseResult> {
-  const transcript = buildTranscript(turns);
+function chunkTranscript(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + maxChars, text.length);
+    if (end < text.length) {
+      const breakAt = text.lastIndexOf("\n\n", end);
+      if (breakAt > start + maxChars * 0.5) end = breakAt;
+    }
+    chunks.push(text.slice(start, end).trim());
+    start = end;
+  }
+  return chunks.filter(Boolean);
+}
 
+const EXTRACT_SYSTEM = (platform: Platform) =>
+  `Extract structured memory from an AI conversation on ${platform}. Return JSON only with keys: topic (string), entities (string[]), decisions (string[]), openQuestions (string[]). Be concise. entities = key nouns/concepts. decisions = conclusions or choices made. openQuestions = unresolved questions.`;
+
+async function extractMemoryJson(
+  apiKey: string,
+  content: string,
+  platform: Platform,
+  mergeHint?: string
+): Promise<SummariseResult> {
   const res = await fetch(`${GROQ.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -100,13 +118,12 @@ export async function summariseSession(
       max_tokens: 512,
       response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content: `Extract structured memory from an AI conversation on ${platform}. Return JSON only with keys: topic (string), entities (string[]), decisions (string[]), openQuestions (string[]). Be concise. entities = key nouns/concepts. decisions = conclusions or choices made. openQuestions = unresolved questions.`,
-        },
+        { role: "system", content: EXTRACT_SYSTEM(platform) },
         {
           role: "user",
-          content: transcript,
+          content: mergeHint
+            ? `${mergeHint}\n\nTranscript:\n${content}`
+            : content,
         },
       ],
     }),
@@ -131,6 +148,47 @@ export async function summariseSession(
       ? parsed.openQuestions.map(String)
       : [],
   };
+}
+
+function mergeSummaries(parts: SummariseResult[]): SummariseResult {
+  const uniq = (lists: string[][]) =>
+    [...new Set(lists.flat().map((s) => s.trim()).filter(Boolean))];
+
+  return {
+    topic: parts[0]?.topic ?? "Untitled session",
+    entities: uniq(parts.map((p) => p.entities)),
+    decisions: uniq(parts.map((p) => p.decisions)),
+    openQuestions: uniq(parts.map((p) => p.openQuestions)),
+  };
+}
+
+export async function summariseSession(
+  apiKey: string,
+  turns: Turn[],
+  platform: Platform
+): Promise<SummariseResult> {
+  const full = buildFullTranscript(turns);
+  const chunks = chunkTranscript(full, SUMMARISE_TRANSCRIPT_MAX_CHARS);
+
+  if (chunks.length === 1) {
+    return extractMemoryJson(apiKey, chunks[0]!, platform);
+  }
+
+  const partials: SummariseResult[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const hint = `Part ${i + 1} of ${chunks.length} of a long conversation. Extract memory from this segment only.`;
+    partials.push(await extractMemoryJson(apiKey, chunks[i]!, platform, hint));
+  }
+
+  const merged = mergeSummaries(partials);
+  const consolidate = await extractMemoryJson(
+    apiKey,
+    JSON.stringify(merged, null, 2),
+    platform,
+    "Consolidate these partial extractions from one conversation into a single coherent memory object. Merge duplicates."
+  );
+
+  return consolidate;
 }
 
 export async function withRetry<T>(
