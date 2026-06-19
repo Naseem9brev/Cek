@@ -84,13 +84,19 @@ export interface TurnCapturedPayload {
 export interface ContextMatchPayload {
   tabId: number;
   nodeId: string;
+  nodeIds: string[];
   score: number;
+  confidence: "high" | "medium" | "low";
+  reason: string;
 }
 
 export interface PendingContextMatch {
   tabId: number;
   node: KnowledgeNode;
+  nodes: KnowledgeNode[];
   score: number;
+  confidence: "high" | "medium" | "low";
+  reason: string;
   dismissed?: boolean;
 }
 
@@ -170,7 +176,18 @@ export type BackgroundResponse =
   | { ok: true; nodes?: KnowledgeNode[] }
   | { ok: true; pendingMatch?: PendingContextMatch | null }
   | { ok: true; data?: string }
-  | { ok: true; match?: { node: KnowledgeNode; score: number } | null }
+  | { ok: true; match?: {
+      node: KnowledgeNode;
+      score: number;
+      confidence: "high" | "medium" | "low";
+      reason: string;
+    } | null }
+  | { ok: true; matches?: Array<{
+      node: KnowledgeNode;
+      score: number;
+      confidence: "high" | "medium" | "low";
+      reason: string;
+    }> }
   | { ok: false; error: string };
 
 export interface AppState {
