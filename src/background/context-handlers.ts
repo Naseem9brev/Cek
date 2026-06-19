@@ -4,7 +4,11 @@ import type {
   ContextMatchPayload,
   PendingContextMatch,
 } from "../lib/messaging";
-import { getKnowledgeNodeById, getKnowledgeNodes } from "../lib/knowledge-nodes";
+import { formatMergedContextInjection } from "../lib/retrieval";
+import {
+  getKnowledgeNodeById,
+  getKnowledgeNodes,
+} from "../lib/knowledge-nodes";
 
 async function getPendingMatches(): Promise<
   Record<number, PendingContextMatch>
@@ -28,24 +32,45 @@ async function savePendingMatches(
   });
 }
 
+async function resolveNodes(nodeIds: string[]) {
+  const nodes = await getKnowledgeNodes();
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  return nodeIds
+    .map((id) => byId.get(id))
+    .filter((n): n is NonNullable<typeof n> => !!n);
+}
+
 export async function handleContextMatchFound(
   payload: ContextMatchPayload,
   tabId: number
 ): Promise<BackgroundResponse> {
-  const node = await getKnowledgeNodeById(payload.nodeId);
-  if (!node) return { ok: false, error: "Node not found" };
+  const nodeIds =
+    payload.nodeIds?.length > 0 ? payload.nodeIds : [payload.nodeId];
+  const nodes = await resolveNodes(nodeIds);
+  const primary = nodes[0] ?? (await getKnowledgeNodeById(payload.nodeId));
+  if (!primary) return { ok: false, error: "Node not found" };
 
   const matches = await getPendingMatches();
-  matches[tabId] = { tabId, node, score: payload.score };
+  matches[tabId] = {
+    tabId,
+    node: primary,
+    nodes: nodes.length ? nodes : [primary],
+    score: payload.score,
+    confidence: payload.confidence ?? "medium",
+    reason: payload.reason ?? "keyword overlap",
+  };
   await savePendingMatches(matches);
 
   await chrome.action.setBadgeText({ text: "!", tabId });
-  await chrome.action.setBadgeBackgroundColor({ color: "#2D6A2D", tabId });
+  await chrome.action.setBadgeBackgroundColor({ color: "#b85c38", tabId });
 
   try {
     await chrome.tabs.sendMessage(tabId, {
       type: "SHOW_CONTEXT_TOAST",
-      node,
+      node: primary,
+      nodes: matches[tabId].nodes,
+      confidence: payload.confidence,
+      reason: payload.reason,
     });
   } catch {
     // Content script may not be ready
@@ -70,18 +95,28 @@ export async function handleInjectContext(
   tabId: number,
   nodeId: string
 ): Promise<BackgroundResponse> {
-  const node = await getKnowledgeNodeById(nodeId);
-  if (!node) return { ok: false, error: "Node not found" };
+  const pending = await getPendingMatches();
+  const match = pending[tabId];
+  let nodes = match?.nodes ?? [];
+  if (!nodes.length) {
+    const one = await getKnowledgeNodeById(nodeId);
+    if (one) nodes = [one];
+  }
+
+  if (!nodes.length) return { ok: false, error: "Node not found" };
+
+  const block = formatMergedContextInjection(nodes);
 
   await chrome.tabs.sendMessage(tabId, {
     type: "INJECT_CONTEXT_NOW",
-    node,
+    node: nodes[0],
+    nodes,
+    text: block,
   });
 
   await chrome.action.setBadgeText({ text: "", tabId });
-  const matches = await getPendingMatches();
-  delete matches[tabId];
-  await savePendingMatches(matches);
+  delete pending[tabId];
+  await savePendingMatches(pending);
 
   return { ok: true };
 }
